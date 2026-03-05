@@ -148,16 +148,21 @@ function updateTurnIndicator(players, currentTurnIndex, status) {
 // ===== 更新掷骰子按钮 =====
 function updateRollBtn(players, currentTurnIndex, status) {
   const btn = document.getElementById('rollBtn');
+  const mobileBtn = document.getElementById('mobileRollBtn');
   if (status !== 'playing' || isRolling) {
     btn.disabled = true;
+    mobileBtn.disabled = true;
     return;
   }
   if (!players || !players[currentTurnIndex]) {
     btn.disabled = true;
+    mobileBtn.disabled = true;
     return;
   }
   const currentPlayer = players[currentTurnIndex];
-  btn.disabled = currentPlayer.socketId !== mySocketId || currentPlayer.isFinished;
+  const disabled = currentPlayer.socketId !== mySocketId || currentPlayer.isFinished;
+  btn.disabled = disabled;
+  mobileBtn.disabled = disabled;
 }
 
 // ===== 渲染游戏日志 =====
@@ -203,15 +208,20 @@ function updateHostSection(state) {
 function rollDice() {
   if (isRolling) return;
   const btn = document.getElementById('rollBtn');
-  if (btn.disabled) return;
+  const mobileBtn = document.getElementById('mobileRollBtn');
+  if (btn.disabled && mobileBtn.disabled) return;
 
   isRolling = true;
   btn.disabled = true;
   btn.textContent = '掷出中...';
+  mobileBtn.disabled = true;
+  mobileBtn.textContent = '掷出中...';
 
   // 骰子动画
   const diceEl = document.getElementById('diceDisplay');
+  const mobileDiceEl = document.getElementById('mobileDiceDisplay');
   diceEl.classList.add('rolling');
+  mobileDiceEl.classList.add('rolling');
 
   socket.emit('roll-dice', { roomId: ROOM_ID });
 }
@@ -336,11 +346,15 @@ socket.on('dice-result', (data) => {
 
   // 停止骰子动画
   const diceEl = document.getElementById('diceDisplay');
+  const mobileDiceEl = document.getElementById('mobileDiceDisplay');
   diceEl.classList.remove('rolling');
   diceEl.textContent = DICE_FACES[diceValue] || diceValue;
+  mobileDiceEl.classList.remove('rolling');
+  mobileDiceEl.textContent = DICE_FACES[diceValue] || diceValue;
 
   isRolling = false;
   document.getElementById('rollBtn').textContent = '掷骰子';
+  document.getElementById('mobileRollBtn').textContent = '掷骰子';
 
   // 更新状态
   renderAll(newState);
@@ -385,6 +399,7 @@ socket.on('error', ({ message }) => {
   isRolling = false;
   const btn = document.getElementById('rollBtn');
   btn.textContent = '掷骰子';
+  document.getElementById('mobileRollBtn').textContent = '掷骰子';
   if (roomState) updateRollBtn(roomState.players, roomState.currentTurnIndex, roomState.status);
   alert('错误：' + message);
 });

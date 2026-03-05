@@ -76,15 +76,27 @@ function renderBoardPlayers(players) {
   });
 }
 
-// ===== 高亮当前回合玩家所在格 =====
-function highlightCurrentCell(players, currentTurnIndex) {
+// ===== 高亮格子：当前回合玩家 + 我自己 =====
+function highlightCells(players, currentTurnIndex) {
   // 清除旧高亮
   document.querySelectorAll('.cell.active-cell').forEach(el => el.classList.remove('active-cell'));
+  document.querySelectorAll('.cell.my-cell').forEach(el => el.classList.remove('my-cell'));
 
-  if (!players || !players[currentTurnIndex]) return;
-  const currentPlayer = players[currentTurnIndex];
-  const cellEl = document.getElementById(`cell-${currentPlayer.position}`);
-  if (cellEl) cellEl.classList.add('active-cell');
+  // 当前回合玩家格（蓝色光晕）
+  if (players && players[currentTurnIndex]) {
+    const currentPlayer = players[currentTurnIndex];
+    const cellEl = document.getElementById(`cell-${currentPlayer.position}`);
+    if (cellEl) cellEl.classList.add('active-cell');
+  }
+
+  // 我自己所在格（蓝色背景高亮）
+  if (players) {
+    const myPlayer = players.find(p => p.socketId === mySocketId);
+    if (myPlayer && !myPlayer.isFinished) {
+      const myCellEl = document.getElementById(`cell-${myPlayer.position}`);
+      if (myCellEl) myCellEl.classList.add('my-cell');
+    }
+  }
 }
 
 // ===== 自动滚动到当前玩家格子 =====
@@ -184,7 +196,7 @@ function renderAll(state) {
   roomState = state;
 
   renderBoardPlayers(state.players);
-  highlightCurrentCell(state.players, state.currentTurnIndex);
+  highlightCells(state.players, state.currentTurnIndex);
   renderSidePlayerList(state.players, state.currentTurnIndex);
   updateTurnIndicator(state.players, state.currentTurnIndex, state.status);
   updateRollBtn(state.players, state.currentTurnIndex, state.status);
@@ -202,6 +214,47 @@ function updateHostSection(state) {
   const resetBtn = document.getElementById('sideResetBtn');
   resetBtn.disabled = false;
   resetBtn.textContent = '↺ 重置游戏';
+}
+
+// ===== 玩家移动动画 =====
+function animatePlayerMove(playerEmoji, fromPos, toPos, callback) {
+  const fromCell = document.getElementById(`cell-${fromPos}`);
+  const toCell = document.getElementById(`cell-${toPos}`);
+  if (!fromCell || !toCell || fromPos === toPos) {
+    callback();
+    return;
+  }
+
+  const fromRect = fromCell.getBoundingClientRect();
+
+  // 创建飞行克隆
+  const clone = document.createElement('span');
+  clone.className = 'flying-emoji';
+  clone.textContent = playerEmoji;
+  clone.style.left = (fromRect.left + fromRect.width / 2 - 13) + 'px';
+  clone.style.top = (fromRect.top + fromRect.height / 2 - 13) + 'px';
+  document.body.appendChild(clone);
+
+  // 先滚动目标格子到视口
+  scrollToPlayer(toPos);
+
+  // 等两帧（滚动生效后）计算目标坐标
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const freshToRect = toCell.getBoundingClientRect();
+      const dx = (freshToRect.left + freshToRect.width / 2 - 13)
+               - (fromRect.left + fromRect.width / 2 - 13);
+      const dy = (freshToRect.top + freshToRect.height / 2 - 13)
+               - (fromRect.top + fromRect.height / 2 - 13);
+      clone.style.transform = `translate(${dx}px, ${dy}px)`;
+    });
+  });
+
+  // 动画结束后执行回调
+  setTimeout(() => {
+    clone.remove();
+    callback();
+  }, 660);
 }
 
 // ===== 掷骰子 =====
@@ -356,18 +409,18 @@ socket.on('dice-result', (data) => {
   document.getElementById('rollBtn').textContent = '掷骰子';
   document.getElementById('mobileRollBtn').textContent = '掷骰子';
 
-  // 更新状态
-  renderAll(newState);
+  // 记录移动玩家的旧位置（动画用）
+  const movingPlayer = roomState?.players?.find(p => p.emoji === playerEmoji);
+  const oldPosition = movingPlayer ? movingPlayer.position : newPosition;
 
-  // 滚动到新位置
-  scrollToPlayer(newPosition);
-
-  // 显示任务详情到侧边栏
-  if (task) {
-    setTimeout(() => {
+  // 执行移动动画，动画结束后再更新棋盘
+  animatePlayerMove(playerEmoji, oldPosition, newPosition, () => {
+    renderAll(newState);
+    // 显示任务详情
+    if (task) {
       showTaskPanel({ playerEmoji, playerName, diceValue, newPosition, task, justFinished });
-    }, 400);
-  }
+    }
+  });
 });
 
 socket.on('game-over', ({ rankings, roomState: finalState }) => {

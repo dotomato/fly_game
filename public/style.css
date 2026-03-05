@@ -471,6 +471,24 @@ body {
   box-shadow: 0 0 0 2px rgba(59,130,246,0.3);
 }
 
+/* 我自己所在的格子 */
+.cell.my-cell {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.22), var(--shadow);
+}
+
+/* 飞行中的棋子克隆 */
+.flying-emoji {
+  position: fixed;
+  font-size: 22px;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 9999;
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+
 /* ========== 侧边面板 ========== */
 .side-panel {
   width: 280px;

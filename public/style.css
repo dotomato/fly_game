@@ -302,9 +302,10 @@ body {
   border-bottom: 3px solid var(--primary);
   padding: 10px 20px;
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   gap: 12px;
   flex-wrap: wrap;
+  min-height: 56px;
   transition: background 0.3s, border-color 0.3s;
   z-index: 9;
 }
@@ -352,6 +353,8 @@ body {
   line-height: 1.5;
   flex: 1;
   min-width: 0;
+  word-break: break-all;
+  white-space: normal;
 }
 
 .btn-home {
@@ -645,13 +648,13 @@ body {
   color: var(--primary);
 }
 
-/* 骰子滚动动画（FAB 使用） */
+/* 骰子滚动动画 */
 @keyframes diceRoll {
-  0% { transform: translateY(-50%) rotate(0deg) scale(1); }
-  25% { transform: translateY(-50%) rotate(90deg) scale(1.1); }
-  50% { transform: translateY(-50%) rotate(180deg) scale(0.9); }
-  75% { transform: translateY(-50%) rotate(270deg) scale(1.1); }
-  100% { transform: translateY(-50%) rotate(360deg) scale(1); }
+  0%   { transform: rotate(0deg) scale(1); }
+  25%  { transform: rotate(90deg) scale(1.1); }
+  50%  { transform: rotate(180deg) scale(0.9); }
+  75%  { transform: rotate(270deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1); }
 }
 
 /* 游戏日志 */
@@ -675,12 +678,20 @@ body {
   font-weight: 500;
 }
 
-/* ========== 悬浮掷骰子按钮 ========== */
+/* ========== 掷骰子按钮托盘 ========== */
+.dice-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  background: var(--gray-50);
+  border-top: 1px solid var(--gray-200);
+}
+
+/* ========== 掉骰子按钮（不再固定定位） ========== */
 .roll-fab {
-  position: fixed;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
+  position: relative;
   width: 60px;
   height: 60px;
   border-radius: 50%;
@@ -705,7 +716,7 @@ body {
 }
 
 .roll-fab:active:not(:disabled) {
-  transform: translateY(-50%) scale(0.93);
+  transform: scale(0.93);
 }
 
 .roll-fab:disabled {
@@ -921,7 +932,7 @@ body {
 
 /* ========== 聊天框（常驻） ========== */
 .chat-box {
-  flex: 0 0 200px;
+  flex: 0 0 260px;
   display: flex;
   flex-direction: column;
   background: white;
@@ -1200,11 +1211,10 @@ body {
   }
 
   .chat-box {
-    flex: 0 0 170px;
+    flex: 0 0 220px;
   }
 
   .roll-fab {
-    right: 14px;
     width: 52px;
     height: 52px;
     font-size: 24px;

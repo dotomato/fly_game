@@ -54,6 +54,11 @@
           </div>
         </div>
 
+        <!-- 掷骰子按钮托盘（聊天框上方居中） -->
+        <div class="dice-bar">
+          <button class="roll-fab" id="rollFab" disabled onclick="rollDice()">🎲</button>
+        </div>
+
         <!-- 聊天框（常驻） -->
         <div class="chat-box" id="chatBox">
           <div class="chat-label">💬 聊天</div>
@@ -95,9 +100,6 @@
       </aside>
     </div>
   </div>
-
-  <!-- 悬浮掷骰子按钮 -->
-  <button class="roll-fab" id="rollFab" disabled onclick="rollDice()">🎲</button>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="game.js"></script>

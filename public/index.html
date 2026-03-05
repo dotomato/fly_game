@@ -181,7 +181,7 @@
     // 游戏开始，跳转到游戏页
     socket.on('game-started', (state) => {
       const playerName = document.getElementById('playerName').value.trim();
-      const url = `/game.html?roomId=${encodeURIComponent(myRoomId)}&name=${encodeURIComponent(playerName)}&idx=${myPlayerIndex}`;
+      const url = `game.html?roomId=${encodeURIComponent(myRoomId)}&name=${encodeURIComponent(playerName)}&idx=${myPlayerIndex}`;
       // 主动断开旧 socket，避免跳转后旧连接触发断线逻辑
       socket.disconnect();
       window.location.href = url;

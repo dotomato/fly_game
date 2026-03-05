@@ -302,7 +302,7 @@ function closeHomeModal() {
 
 function goHome() {
   socket.disconnect();
-  window.location.href = '/';
+  window.location.href = './';
 }
 
 // ===== 工具函数 =====
@@ -383,7 +383,7 @@ socket.on('room-destroyed', ({ message }) => {
   document.getElementById('destroyedModal').classList.add('show');
   setTimeout(() => {
     socket.disconnect();
-    window.location.href = '/';
+    window.location.href = './';
   }, 2000);
 });
 
@@ -403,5 +403,5 @@ initBoard().then(() => {
 
 // 如果页面刷新，尝试重新加入房间
 if (!ROOM_ID) {
-  window.location.href = '/';
+  window.location.href = './';
 }

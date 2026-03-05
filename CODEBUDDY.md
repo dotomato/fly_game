@@ -17,6 +17,9 @@ node server.js
 # or
 npm start
 
+# Deploy to production server
+bash deploy.sh
+
 # Access at http://localhost:3000
 # Cloud: automatically uses process.env.PORT
 ```
@@ -27,6 +30,7 @@ npm start
 fly_game/
 ├── server.js          # Node.js backend: Express + Socket.io
 ├── package.json
+├── deploy.sh          # One-click deploy: git push + SSH pull + systemctl restart
 ├── data/
 │   └── tasks.json     # 80-cell task configuration
 └── public/            # Static frontend (served by Express)
@@ -48,6 +52,8 @@ fly_game/
 
 **Disconnect handling**: During `waiting` the player is removed; during `playing` the player is marked `isFinished` and their turn is skipped.
 
+**Chat system**: In-memory only (`room.chatMessages[]`, max 100 entries). Text messages via `chat-message` event. Voice messages via `voice-message` event — audio transmitted as binary (ArrayBuffer) through Socket.io, relayed by server without storage.
+
 ## Socket.io Event Reference
 
 | Event | Direction | Payload |
@@ -60,6 +66,13 @@ fly_game/
 | `roll-dice` | client → server | `{ roomId }` |
 | `dice-result` | server → all | `{ diceValue, newPosition, task, justFinished, roomState, ... }` |
 | `game-over` | server → all | `{ rankings, roomState }` |
+| `chat-message` | client → server | `{ roomId, message }` |
+| `chat-message` | server → all | `{ playerEmoji, playerName, message, timestamp }` |
+| `voice-message` | client → server | `{ roomId, audio: ArrayBuffer, duration }` |
+| `voice-message` | server → all | `{ playerEmoji, playerName, audio: Buffer, duration, timestamp }` |
+| `reset-game` | client → server | `{ roomId }` |
+| `destroy-room` | client → server | `{ roomId }` |
+| `room-destroyed` | server → all | `{ message }` |
 | `error` | server → client | `{ message }` |
 
 ## Task Config Format (`data/tasks.json`)
@@ -74,8 +87,35 @@ fly_game/
 
 Cells 75-80 must have `"hasEnd": true`. The server reads this file at startup; restart required after editing.
 
+## Frontend Layout (game.html)
+
+```
+game-layout (flex column, 100vh)
+├── game-header          # Title + turn indicator + home button
+├── task-bar             # Full-width task detail (flex column: meta row + content row)
+└── game-body (flex row)
+    ├── board-area (flex column)
+    │   ├── board-scroll-container   # Horizontal scrolling board track
+    │   ├── dice-bar                 # Centered roll button (🎲)
+    │   └── chat-box                 # Always-open chat (text + voice)
+    └── side-panel                   # Player list, host controls, game log (hidden on mobile)
+```
+
 ## Frontend Navigation Flow
 
 `index.html` (join form) → Socket `join-room` → waiting room UI → host clicks start → Socket `game-started` → redirect to `game.html?roomId=&name=&idx=`
 
 `game.html` loads `game.js` which re-emits `join-room` on reconnect (to handle page refresh).
+
+## Voice Message Implementation
+
+- **Recording**: `MediaRecorder` API, press-and-hold the 🎤 button (max 60s). Format priority: `audio/webm;codecs=opus` → `audio/webm` → `audio/wav`.
+- **Transmission**: `blob.arrayBuffer()` → emit as binary via Socket.io (no base64 overhead). Server relays without storing.
+- **Playback**: `URL.createObjectURL(new Blob([audio]))` → `new Audio(url).play()`. URL revoked on end to prevent memory leaks.
+- **UI**: Custom voice bubble with animated wave bars and duration label. Requires HTTPS or localhost for `getUserMedia`.
+
+## Animation Details
+
+- **Emoji flight**: `position:fixed` clone escapes `overflow:hidden` board container. Instant scroll (`behavior:'instant'`) before `getBoundingClientRect()` prevents race condition with smooth scroll.
+- **Dice roll**: `@keyframes diceRoll` on `.roll-fab.rolling` — no `translateY` needed since button is now in normal flow (not fixed).
+- **Cell highlight**: `.active-cell` (current turn player) + `.my-cell` (local player's own cell, blue gradient).

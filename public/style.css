@@ -302,10 +302,8 @@ body {
   border-bottom: 3px solid var(--primary);
   padding: 10px 20px;
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  flex-wrap: wrap;
-  min-height: 56px;
+  flex-direction: column;
+  gap: 4px;
   transition: background 0.3s, border-color 0.3s;
   z-index: 9;
 }
@@ -319,7 +317,6 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
 }
 
 .task-bar-cell {
@@ -351,10 +348,8 @@ body {
   font-weight: 600;
   color: var(--gray-900);
   line-height: 1.5;
-  flex: 1;
-  min-width: 0;
-  word-break: break-all;
   white-space: normal;
+  word-break: break-all;
 }
 
 .btn-home {
@@ -1174,19 +1169,10 @@ body {
 
   .task-bar {
     padding: 8px 14px;
-    flex-wrap: nowrap;
-    overflow: hidden;
   }
 
   .task-bar-content {
     font-size: 14px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .task-bar-meta {
-    flex-shrink: 0;
   }
 
   .game-header {

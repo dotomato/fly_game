@@ -16,6 +16,7 @@ let roomState = null;
 let mySocketId = null;
 let isRolling = false;
 let tasksData = [];
+let chatUnread = 0;
 
 // 骰子数字映射
 const DICE_FACES = ['', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣'];
@@ -307,6 +308,87 @@ function clearTaskPanel() {
   document.getElementById('taskBarContent').textContent = '落子后，任务将显示在这里 ✨';
 }
 
+// ===== 聊天 =====
+function initChat() {
+  // 移动端默认折叠
+  if (window.innerWidth <= 768) {
+    document.getElementById('chatBox').classList.add('collapsed');
+  }
+  appendChatMessage({ system: true, message: '聊天室已开启，说点什么吧～' });
+}
+
+function toggleChat() {
+  const box = document.getElementById('chatBox');
+  const badge = document.getElementById('chatUnreadBadge');
+  box.classList.toggle('collapsed');
+  if (!box.classList.contains('collapsed')) {
+    chatUnread = 0;
+    badge.style.display = 'none';
+    // 展开时滚到底
+    const msgs = document.getElementById('chatMessages');
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+}
+
+function appendChatMessage({ system = false, playerEmoji, playerName, message, timestamp, isMine = false }) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+
+  if (system) {
+    div.className = 'chat-msg system';
+    const bubble = document.createElement('span');
+    bubble.className = 'chat-msg-bubble';
+    bubble.textContent = message;
+    div.appendChild(bubble);
+  } else {
+    div.className = 'chat-msg ' + (isMine ? 'mine' : 'theirs');
+
+    const meta = document.createElement('div');
+    meta.className = 'chat-msg-meta';
+    const timeStr = formatChatTime(timestamp);
+    meta.textContent = isMine ? timeStr : `${playerEmoji} ${playerName}  ${timeStr}`;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-msg-bubble';
+    bubble.textContent = message; // textContent 防 XSS
+
+    div.appendChild(meta);
+    div.appendChild(bubble);
+  }
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+
+  // 折叠时累计未读数
+  if (!system && document.getElementById('chatBox').classList.contains('collapsed')) {
+    chatUnread++;
+    const badge = document.getElementById('chatUnreadBadge');
+    badge.textContent = chatUnread > 99 ? '99+' : String(chatUnread);
+    badge.style.display = 'inline';
+  }
+}
+
+function formatChatTime(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+}
+
+function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message || !ROOM_ID) return;
+  socket.emit('chat-message', { roomId: ROOM_ID, message });
+  input.value = '';
+}
+
+function handleChatKey(event) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    sendChatMessage();
+  }
+}
+
 // ===== 游戏结束弹窗 =====
 function showGameOver(rankings) {
   const list = document.getElementById('rankingList');
@@ -436,10 +518,21 @@ socket.on('game-reset', (state) => {
   document.getElementById('gameoverOverlay').classList.remove('show');
   // 清除任务详情
   clearTaskPanel();
+  // 清空聊天记录
+  document.getElementById('chatMessages').innerHTML = '';
+  chatUnread = 0;
+  document.getElementById('chatUnreadBadge').style.display = 'none';
+  appendChatMessage({ system: true, message: '游戏已重置，聊天记录已清除～' });
   // 重新渲染（含房主按钮状态恢复）
   renderAll(state);
   // 滚动回起点
   document.getElementById('boardScrollContainer').scrollLeft = 0;
+});
+
+socket.on('chat-message', (data) => {
+  const myPlayer = roomState?.players?.find(p => p.socketId === mySocketId);
+  const isMine = myPlayer && myPlayer.emoji === data.playerEmoji && myPlayer.name === data.playerName;
+  appendChatMessage({ ...data, isMine });
 });
 
 socket.on('room-destroyed', ({ message }) => {
@@ -462,6 +555,7 @@ socket.on('error', ({ message }) => {
 
 // ===== 初始化 =====
 initBoard().then(() => {
+  initChat();
   // 棋盘初始化完成后若已有状态则重新渲染
   if (roomState) renderAll(roomState);
 });

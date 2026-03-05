@@ -54,6 +54,24 @@
           <div class="task-bar-content" id="taskBarContent">落子后，任务将显示在这里 ✨</div>
         </div>
 
+        <!-- 聊天框 -->
+        <div class="chat-box" id="chatBox">
+          <div class="chat-header" onclick="toggleChat()">
+            <span class="chat-title">💬 聊天</span>
+            <span class="chat-unread-badge" id="chatUnreadBadge" style="display:none">0</span>
+            <span class="chat-toggle-icon" id="chatToggleIcon">▲</span>
+          </div>
+          <div class="chat-body" id="chatBody">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-row">
+              <input type="text" class="chat-input" id="chatInput"
+                placeholder="说点什么..." maxlength="200" autocomplete="off"
+                onkeydown="handleChatKey(event)" />
+              <button class="btn chat-send-btn" onclick="sendChatMessage()">发送</button>
+            </div>
+          </div>
+        </div>
+
         <!-- 移动端掷骰子按钮（仅移动端显示）-->
         <div class="mobile-roll-bar" id="mobileRollBar">
           <div class="mobile-dice-display" id="mobileDiceDisplay">🎲</div>

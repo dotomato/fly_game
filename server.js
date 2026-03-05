@@ -43,7 +43,8 @@ const EMOJIS = ['❤️', '💙', '💚', '💛'];
  *   currentTurnIndex: number,
  *   status: 'waiting' | 'playing' | 'finished',
  *   finishCount: number,
- *   log: string[]
+ *   log: string[],
+ *   chatMessages: [{ playerEmoji, playerName, message, timestamp }]
  * }
  */
 
@@ -101,7 +102,8 @@ io.on('connection', (socket) => {
         currentTurnIndex: 0,
         status: 'waiting',
         finishCount: 0,
-        log: []
+        log: [],
+        chatMessages: []
       };
       rooms.set(roomId, room);
       console.log(`[创建房间] ${roomId} by ${socket.id}`);
@@ -213,6 +215,7 @@ io.on('connection', (socket) => {
     room.finishCount = 0;
     room.status = 'playing';
     room.log = ['游戏重置，再来一局！'];
+    room.chatMessages = [];
     const firstPlayer = room.players[0];
     room.log.push(`轮到 ${firstPlayer.emoji} ${firstPlayer.name} 掷骰子`);
 
@@ -326,6 +329,29 @@ io.on('connection', (socket) => {
       io.to(roomId).emit('game-over', { rankings, roomState: getRoomPublicState(room) });
       console.log(`[游戏结束] 房间 ${roomId}`);
     }
+  });
+
+  // 聊天消息
+  socket.on('chat-message', ({ roomId, message }) => {
+    const room = rooms.get(roomId);
+    if (!room || room.status === 'waiting') return;
+    const player = room.players.find(p => p.socketId === socket.id);
+    if (!player) return;
+
+    message = String(message).trim().slice(0, 200);
+    if (!message) return;
+
+    const chatMsg = {
+      playerEmoji: player.emoji,
+      playerName: player.name,
+      message,
+      timestamp: new Date().toISOString()
+    };
+
+    room.chatMessages.push(chatMsg);
+    if (room.chatMessages.length > 100) room.chatMessages.shift();
+
+    io.to(roomId).emit('chat-message', chatMsg);
   });
 
   // 断线处理（带宽限期，防止页面跳转时的竞态）

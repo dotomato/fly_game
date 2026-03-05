@@ -44,6 +44,15 @@
             <!-- 1-80格由JS动态生成 -->
           </div>
         </div>
+
+        <!-- 当前任务区 -->
+        <div class="task-bar" id="taskBar">
+          <div class="task-bar-meta">
+            <span class="task-bar-cell" id="taskBarCell"></span>
+            <span class="task-bar-player" id="taskBarPlayer"></span>
+          </div>
+          <div class="task-bar-content" id="taskBarContent">落子后，任务将显示在这里 ✨</div>
+        </div>
       </div>
 
       <!-- 侧边面板 -->
@@ -71,14 +80,6 @@
             <button class="btn btn-warning" id="sideResetBtn" onclick="resetGame()">↺ 重置游戏</button>
             <button class="btn btn-danger" id="sideDestroyBtn" onclick="confirmDestroy()">✕ 销毁房间</button>
           </div>
-        </div>
-
-        <!-- 任务详情 -->
-        <div class="side-section task-panel" id="taskPanel">
-          <h3>当前任务</h3>
-          <div class="task-panel-player" id="taskPanelPlayer"></div>
-          <div class="task-panel-cell" id="taskPanelCell"></div>
-          <div class="task-panel-content" id="taskPanelContent">等待玩家落子...</div>
         </div>
 
         <!-- 日志 -->

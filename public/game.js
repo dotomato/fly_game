@@ -24,7 +24,7 @@ const DICE_FACES = ['', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '
 async function initBoard() {
   // 加载任务数据
   try {
-    const res = await fetch('/api/tasks');
+    const res = await fetch('api/tasks');
     tasksData = await res.json();
   } catch (e) {
     console.warn('任务数据加载失败', e);
@@ -216,31 +216,29 @@ function rollDice() {
   socket.emit('roll-dice', { roomId: ROOM_ID });
 }
 
-// ===== 任务详情（侧边栏）=====
+// ===== 任务详情（棋盘底部）=====
 function showTaskPanel(data) {
   const { playerEmoji, playerName, diceValue, newPosition, task, justFinished } = data;
 
-  const panel = document.getElementById('taskPanel');
-  const panelCell = document.getElementById('taskPanelCell');
-  const panelPlayer = document.getElementById('taskPanelPlayer');
-  const panelContent = document.getElementById('taskPanelContent');
-
-  panelCell.textContent = `第 ${newPosition} 格`;
-  panelPlayer.innerHTML = `${playerEmoji} <span>${escapeHtml(playerName)}</span> 掷出 ${DICE_FACES[diceValue]}`;
-  panelContent.textContent = task ? task.content : '（无任务）';
+  const bar = document.getElementById('taskBar');
+  document.getElementById('taskBarCell').textContent = `第 ${newPosition} 格`;
+  document.getElementById('taskBarPlayer').innerHTML =
+    `${playerEmoji} <strong>${escapeHtml(playerName)}</strong> 掷出 ${DICE_FACES[diceValue]}`;
+  document.getElementById('taskBarContent').textContent = task ? task.content : '（无任务）';
 
   if (justFinished) {
-    panel.classList.add('task-panel-end');
+    bar.classList.add('task-bar-end');
   } else {
-    panel.classList.remove('task-panel-end');
+    bar.classList.remove('task-bar-end');
   }
-
-  panel.classList.add('show');
 }
 
 function clearTaskPanel() {
-  const panel = document.getElementById('taskPanel');
-  panel.classList.remove('show', 'task-panel-end');
+  const bar = document.getElementById('taskBar');
+  bar.classList.remove('task-bar-end');
+  document.getElementById('taskBarCell').textContent = '';
+  document.getElementById('taskBarPlayer').textContent = '';
+  document.getElementById('taskBarContent').textContent = '落子后，任务将显示在这里 ✨';
 }
 
 // ===== 游戏结束弹窗 =====

@@ -623,48 +623,56 @@ body {
   font-weight: 500;
 }
 
-/* ========== 任务详情面板 ========== */
-.task-panel {
-  border-top: 2px solid var(--primary);
+/* ========== 任务底部栏 ========== */
+.task-bar {
+  flex-shrink: 0;
   background: var(--primary-light);
-  transition: background 0.3s;
+  border-top: 3px solid var(--primary);
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: background 0.3s, border-color 0.3s;
 }
 
-.task-panel.task-panel-end {
-  border-top-color: var(--danger);
+.task-bar.task-bar-end {
   background: var(--danger-light);
+  border-top-color: var(--danger);
 }
 
-.task-panel-player {
-  font-size: 13px;
-  color: var(--gray-500);
-  margin-bottom: 6px;
+.task-bar-meta {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 12px;
 }
 
-.task-panel-player span {
-  font-weight: 600;
-  color: var(--gray-700);
-}
-
-.task-panel-cell {
-  font-size: 11px;
-  font-weight: 600;
+.task-bar-cell {
+  font-size: 12px;
+  font-weight: 700;
   color: var(--primary);
-  margin-bottom: 8px;
+  background: white;
+  border-radius: 6px;
+  padding: 2px 8px;
 }
 
-.task-panel.task-panel-end .task-panel-cell {
+.task-bar.task-bar-end .task-bar-cell {
   color: var(--danger);
 }
 
-.task-panel-content {
-  font-size: 14px;
+.task-bar-player {
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.task-bar-player strong {
   color: var(--gray-800);
-  line-height: 1.7;
-  font-weight: 500;
+}
+
+.task-bar-content {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--gray-900);
+  line-height: 1.6;
 }
 
 /* ========== 任务弹窗 ========== */
@@ -871,6 +879,14 @@ body {
 @media (max-width: 768px) {
   .side-panel {
     display: none;
+  }
+
+  .task-bar {
+    padding: 12px 16px;
+  }
+
+  .task-bar-content {
+    font-size: 15px;
   }
 
   .game-header {

@@ -16,6 +16,15 @@
       <button class="btn-home" onclick="confirmHome()">← 首页</button>
     </header>
 
+    <!-- 任务详情（标题栏下方，全宽） -->
+    <div class="task-bar" id="taskBar">
+      <div class="task-bar-meta">
+        <span class="task-bar-cell" id="taskBarCell"></span>
+        <span class="task-bar-player" id="taskBarPlayer"></span>
+      </div>
+      <div class="task-bar-content" id="taskBarContent">落子后，任务将显示在这里 ✨</div>
+    </div>
+
     <!-- 返回首页确认弹窗 -->
     <div class="modal-overlay" id="homeModal">
       <div class="modal-card" style="max-width:360px">
@@ -45,37 +54,16 @@
           </div>
         </div>
 
-        <!-- 当前任务区 -->
-        <div class="task-bar" id="taskBar">
-          <div class="task-bar-meta">
-            <span class="task-bar-cell" id="taskBarCell"></span>
-            <span class="task-bar-player" id="taskBarPlayer"></span>
-          </div>
-          <div class="task-bar-content" id="taskBarContent">落子后，任务将显示在这里 ✨</div>
-        </div>
-
-        <!-- 聊天框 -->
+        <!-- 聊天框（常驻） -->
         <div class="chat-box" id="chatBox">
-          <div class="chat-header" onclick="toggleChat()">
-            <span class="chat-title">💬 聊天</span>
-            <span class="chat-unread-badge" id="chatUnreadBadge" style="display:none">0</span>
-            <span class="chat-toggle-icon" id="chatToggleIcon">▲</span>
+          <div class="chat-label">💬 聊天</div>
+          <div class="chat-messages" id="chatMessages"></div>
+          <div class="chat-input-row">
+            <input type="text" class="chat-input" id="chatInput"
+              placeholder="说点什么..." maxlength="200" autocomplete="off"
+              onkeydown="handleChatKey(event)" />
+            <button class="chat-send-btn" onclick="sendChatMessage()">发送</button>
           </div>
-          <div class="chat-body" id="chatBody">
-            <div class="chat-messages" id="chatMessages"></div>
-            <div class="chat-input-row">
-              <input type="text" class="chat-input" id="chatInput"
-                placeholder="说点什么..." maxlength="200" autocomplete="off"
-                onkeydown="handleChatKey(event)" />
-              <button class="btn chat-send-btn" onclick="sendChatMessage()">发送</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 移动端掷骰子按钮（仅移动端显示）-->
-        <div class="mobile-roll-bar" id="mobileRollBar">
-          <div class="mobile-dice-display" id="mobileDiceDisplay">🎲</div>
-          <button class="btn btn-primary mobile-roll-btn" id="mobileRollBtn" disabled onclick="rollDice()">掷骰子</button>
         </div>
       </div>
 
@@ -86,15 +74,6 @@
         <div class="side-section">
           <h3>玩家</h3>
           <ul class="side-player-list" id="sidePlayerList"></ul>
-        </div>
-
-        <!-- 骰子 -->
-        <div class="side-section">
-          <h3>骰子</h3>
-          <div class="dice-area">
-            <div class="dice-display" id="diceDisplay">🎲</div>
-            <button class="btn btn-primary" id="rollBtn" disabled onclick="rollDice()">掷骰子</button>
-          </div>
         </div>
 
         <!-- 房主操作区 -->
@@ -115,6 +94,9 @@
       </aside>
     </div>
   </div>
+
+  <!-- 悬浮掷骰子按钮 -->
+  <button class="roll-fab" id="rollFab" disabled onclick="rollDice()">🎲</button>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="game.js"></script>

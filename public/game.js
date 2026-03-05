@@ -16,14 +16,12 @@ let roomState = null;
 let mySocketId = null;
 let isRolling = false;
 let tasksData = [];
-let chatUnread = 0;
 
 // 骰子数字映射
 const DICE_FACES = ['', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣'];
 
 // ===== 棋盘初始化 =====
 async function initBoard() {
-  // 加载任务数据
   try {
     const res = await fetch('api/tasks');
     tasksData = await res.json();
@@ -48,24 +46,20 @@ async function initBoard() {
       <div class="cell-players" id="players-${i}"></div>
     `;
 
-    // 鼠标悬停提示（桌面端）
     cell.title = task ? `第 ${i} 格：${task.content}` : `第 ${i} 格`;
-
     track.appendChild(cell);
   }
 }
 
 // ===== 渲染棋盘上的棋子 =====
 function renderBoardPlayers(players) {
-  // 清空所有格子的棋子
   for (let i = 0; i <= 80; i++) {
     const el = document.getElementById(`players-${i}`);
     if (el) el.innerHTML = '';
   }
 
-  // 重新放置
   players.forEach(p => {
-    const pos = p.position; // 0 = 起点
+    const pos = p.position;
     const el = document.getElementById(`players-${pos}`);
     if (el) {
       const span = document.createElement('span');
@@ -79,18 +73,15 @@ function renderBoardPlayers(players) {
 
 // ===== 高亮格子：当前回合玩家 + 我自己 =====
 function highlightCells(players, currentTurnIndex) {
-  // 清除旧高亮
   document.querySelectorAll('.cell.active-cell').forEach(el => el.classList.remove('active-cell'));
   document.querySelectorAll('.cell.my-cell').forEach(el => el.classList.remove('my-cell'));
 
-  // 当前回合玩家格（蓝色光晕）
   if (players && players[currentTurnIndex]) {
     const currentPlayer = players[currentTurnIndex];
     const cellEl = document.getElementById(`cell-${currentPlayer.position}`);
     if (cellEl) cellEl.classList.add('active-cell');
   }
 
-  // 我自己所在格（蓝色背景高亮）
   if (players) {
     const myPlayer = players.find(p => p.socketId === mySocketId);
     if (myPlayer && !myPlayer.isFinished) {
@@ -158,24 +149,19 @@ function updateTurnIndicator(players, currentTurnIndex, status) {
   }
 }
 
-// ===== 更新掷骰子按钮 =====
+// ===== 更新掷骰子按钮（悬浮 FAB） =====
 function updateRollBtn(players, currentTurnIndex, status) {
-  const btn = document.getElementById('rollBtn');
-  const mobileBtn = document.getElementById('mobileRollBtn');
+  const fab = document.getElementById('rollFab');
   if (status !== 'playing' || isRolling) {
-    btn.disabled = true;
-    mobileBtn.disabled = true;
+    fab.disabled = true;
     return;
   }
   if (!players || !players[currentTurnIndex]) {
-    btn.disabled = true;
-    mobileBtn.disabled = true;
+    fab.disabled = true;
     return;
   }
   const currentPlayer = players[currentTurnIndex];
-  const disabled = currentPlayer.socketId !== mySocketId || currentPlayer.isFinished;
-  btn.disabled = disabled;
-  mobileBtn.disabled = disabled;
+  fab.disabled = currentPlayer.socketId !== mySocketId || currentPlayer.isFinished;
 }
 
 // ===== 渲染游戏日志 =====
@@ -211,7 +197,6 @@ function updateHostSection(state) {
   const isHost = state.hostId === mySocketId;
   section.style.display = isHost ? 'block' : 'none';
 
-  // 重置按钮：随时可用
   const resetBtn = document.getElementById('sideResetBtn');
   resetBtn.disabled = false;
   resetBtn.textContent = '↺ 重置游戏';
@@ -226,16 +211,13 @@ function animatePlayerMove(playerEmoji, fromPos, toPos, callback) {
     return;
   }
 
-  // 立即滚动（instant），确保目标格子已在视口内，位置稳定
   scrollToPlayer(toPos, true);
 
-  // 等两帧让布局稳定后，再取两端坐标
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       const fromRect = fromCell.getBoundingClientRect();
       const toRect = toCell.getBoundingClientRect();
 
-      // 创建飞行克隆，起点精确对准源格子中心
       const clone = document.createElement('span');
       clone.className = 'flying-emoji';
       clone.textContent = playerEmoji;
@@ -245,14 +227,12 @@ function animatePlayerMove(playerEmoji, fromPos, toPos, callback) {
       clone.style.top = startY + 'px';
       document.body.appendChild(clone);
 
-      // 下一帧触发过渡，translate 到目标中心
       requestAnimationFrame(() => {
         const dx = (toRect.left + toRect.width / 2 - 13) - startX;
         const dy = (toRect.top + toRect.height / 2 - 13) - startY;
         clone.style.transform = `translate(${dx}px, ${dy}px)`;
       });
 
-      // 动画结束后执行回调
       setTimeout(() => {
         clone.remove();
         callback();
@@ -264,26 +244,17 @@ function animatePlayerMove(playerEmoji, fromPos, toPos, callback) {
 // ===== 掷骰子 =====
 function rollDice() {
   if (isRolling) return;
-  const btn = document.getElementById('rollBtn');
-  const mobileBtn = document.getElementById('mobileRollBtn');
-  if (btn.disabled && mobileBtn.disabled) return;
+  const fab = document.getElementById('rollFab');
+  if (fab.disabled) return;
 
   isRolling = true;
-  btn.disabled = true;
-  btn.textContent = '掷出中...';
-  mobileBtn.disabled = true;
-  mobileBtn.textContent = '掷出中...';
-
-  // 骰子动画
-  const diceEl = document.getElementById('diceDisplay');
-  const mobileDiceEl = document.getElementById('mobileDiceDisplay');
-  diceEl.classList.add('rolling');
-  mobileDiceEl.classList.add('rolling');
+  fab.disabled = true;
+  fab.classList.add('rolling');
 
   socket.emit('roll-dice', { roomId: ROOM_ID });
 }
 
-// ===== 任务详情（棋盘底部）=====
+// ===== 任务详情（标题栏下方）=====
 function showTaskPanel(data) {
   const { playerEmoji, playerName, diceValue, newPosition, task, justFinished } = data;
 
@@ -310,24 +281,7 @@ function clearTaskPanel() {
 
 // ===== 聊天 =====
 function initChat() {
-  // 移动端默认折叠
-  if (window.innerWidth <= 768) {
-    document.getElementById('chatBox').classList.add('collapsed');
-  }
   appendChatMessage({ system: true, message: '聊天室已开启，说点什么吧～' });
-}
-
-function toggleChat() {
-  const box = document.getElementById('chatBox');
-  const badge = document.getElementById('chatUnreadBadge');
-  box.classList.toggle('collapsed');
-  if (!box.classList.contains('collapsed')) {
-    chatUnread = 0;
-    badge.style.display = 'none';
-    // 展开时滚到底
-    const msgs = document.getElementById('chatMessages');
-    msgs.scrollTop = msgs.scrollHeight;
-  }
 }
 
 function appendChatMessage({ system = false, playerEmoji, playerName, message, timestamp, isMine = false }) {
@@ -350,7 +304,7 @@ function appendChatMessage({ system = false, playerEmoji, playerName, message, t
 
     const bubble = document.createElement('div');
     bubble.className = 'chat-msg-bubble';
-    bubble.textContent = message; // textContent 防 XSS
+    bubble.textContent = message;
 
     div.appendChild(meta);
     div.appendChild(bubble);
@@ -358,14 +312,6 @@ function appendChatMessage({ system = false, playerEmoji, playerName, message, t
 
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
-
-  // 折叠时累计未读数
-  if (!system && document.getElementById('chatBox').classList.contains('collapsed')) {
-    chatUnread++;
-    const badge = document.getElementById('chatUnreadBadge');
-    badge.textContent = chatUnread > 99 ? '99+' : String(chatUnread);
-    badge.style.display = 'inline';
-  }
 }
 
 function formatChatTime(isoString) {
@@ -454,8 +400,6 @@ function escapeHtml(str) {
 
 socket.on('connect', () => {
   mySocketId = socket.id;
-  // 重连/首次进入游戏页时，重新加入房间以同步状态
-  // maxPlayers 传 0，服务端对已存在房间不会用此值
   if (ROOM_ID && MY_NAME) {
     socket.emit('join-room', {
       roomId: ROOM_ID,
@@ -465,7 +409,6 @@ socket.on('connect', () => {
   }
 });
 
-// 重新加入房间后同步
 socket.on('joined', () => {
   // 等待 room-update 或 game-started
 });
@@ -483,16 +426,16 @@ socket.on('dice-result', (data) => {
   const { roomState: newState, diceValue, justFinished, task, newPosition, playerEmoji, playerName } = data;
 
   // 停止骰子动画
-  const diceEl = document.getElementById('diceDisplay');
-  const mobileDiceEl = document.getElementById('mobileDiceDisplay');
-  diceEl.classList.remove('rolling');
-  diceEl.textContent = DICE_FACES[diceValue] || diceValue;
-  mobileDiceEl.classList.remove('rolling');
-  mobileDiceEl.textContent = DICE_FACES[diceValue] || diceValue;
+  const fab = document.getElementById('rollFab');
+  fab.classList.remove('rolling');
+  fab.textContent = DICE_FACES[diceValue] || '🎲';
+
+  // 2秒后恢复骰子图标
+  setTimeout(() => {
+    if (!fab.classList.contains('rolling')) fab.textContent = '🎲';
+  }, 2000);
 
   isRolling = false;
-  document.getElementById('rollBtn').textContent = '掷骰子';
-  document.getElementById('mobileRollBtn').textContent = '掷骰子';
 
   // 记录移动玩家的旧位置（动画用）
   const movingPlayer = roomState?.players?.find(p => p.emoji === playerEmoji);
@@ -501,7 +444,6 @@ socket.on('dice-result', (data) => {
   // 执行移动动画，动画结束后再更新棋盘
   animatePlayerMove(playerEmoji, oldPosition, newPosition, () => {
     renderAll(newState);
-    // 显示任务详情
     if (task) {
       showTaskPanel({ playerEmoji, playerName, diceValue, newPosition, task, justFinished });
     }
@@ -514,18 +456,11 @@ socket.on('game-over', ({ rankings, roomState: finalState }) => {
 });
 
 socket.on('game-reset', (state) => {
-  // 隐藏结束弹窗
   document.getElementById('gameoverOverlay').classList.remove('show');
-  // 清除任务详情
   clearTaskPanel();
-  // 清空聊天记录
   document.getElementById('chatMessages').innerHTML = '';
-  chatUnread = 0;
-  document.getElementById('chatUnreadBadge').style.display = 'none';
   appendChatMessage({ system: true, message: '游戏已重置，聊天记录已清除～' });
-  // 重新渲染（含房主按钮状态恢复）
   renderAll(state);
-  // 滚动回起点
   document.getElementById('boardScrollContainer').scrollLeft = 0;
 });
 
@@ -536,7 +471,6 @@ socket.on('chat-message', (data) => {
 });
 
 socket.on('room-destroyed', ({ message }) => {
-  // 显示提示弹窗后跳回首页
   document.getElementById('destroyedModal').classList.add('show');
   setTimeout(() => {
     socket.disconnect();
@@ -546,9 +480,9 @@ socket.on('room-destroyed', ({ message }) => {
 
 socket.on('error', ({ message }) => {
   isRolling = false;
-  const btn = document.getElementById('rollBtn');
-  btn.textContent = '掷骰子';
-  document.getElementById('mobileRollBtn').textContent = '掷骰子';
+  const fab = document.getElementById('rollFab');
+  fab.classList.remove('rolling');
+  fab.textContent = '🎲';
   if (roomState) updateRollBtn(roomState.players, roomState.currentTurnIndex, roomState.status);
   alert('错误：' + message);
 });
@@ -556,11 +490,9 @@ socket.on('error', ({ message }) => {
 // ===== 初始化 =====
 initBoard().then(() => {
   initChat();
-  // 棋盘初始化完成后若已有状态则重新渲染
   if (roomState) renderAll(roomState);
 });
 
-// 如果页面刷新，尝试重新加入房间
 if (!ROOM_ID) {
   window.location.href = './';
 }

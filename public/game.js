@@ -39,11 +39,11 @@ async function initBoard() {
     if (i >= 75) cell.classList.add('end-cell');
 
     const task = tasksData[i - 1];
-    const previewText = task ? task.content : '';
+    const titleText = task ? task.title : '';
 
     cell.innerHTML = `
       <div class="cell-number">${i}</div>
-      <div class="cell-content-preview">${escapeHtml(previewText)}</div>
+      <div class="cell-title">${escapeHtml(titleText)}</div>
       <div class="cell-players" id="players-${i}"></div>
     `;
 
@@ -216,37 +216,31 @@ function rollDice() {
   socket.emit('roll-dice', { roomId: ROOM_ID });
 }
 
-// ===== 任务弹窗 =====
-function showTaskModal(data) {
+// ===== 任务详情（侧边栏）=====
+function showTaskPanel(data) {
   const { playerEmoji, playerName, diceValue, newPosition, task, justFinished } = data;
 
-  document.getElementById('modalCellNum').textContent = `第 ${newPosition} 格`;
-  document.getElementById('modalPlayerEmoji').textContent = playerEmoji;
-  document.getElementById('modalPlayerName').textContent = playerName;
-  document.getElementById('modalDice').textContent = `掷出了 ${DICE_FACES[diceValue]} ${diceValue} 点`;
+  const panel = document.getElementById('taskPanel');
+  const panelCell = document.getElementById('taskPanelCell');
+  const panelPlayer = document.getElementById('taskPanelPlayer');
+  const panelContent = document.getElementById('taskPanelContent');
 
-  const endBadge = document.getElementById('modalEndBadge');
-  const taskContent = document.getElementById('modalTaskContent');
-  const closeBtn = document.getElementById('modalCloseBtn');
+  panelCell.textContent = `第 ${newPosition} 格`;
+  panelPlayer.innerHTML = `${playerEmoji} <span>${escapeHtml(playerName)}</span> 掷出 ${DICE_FACES[diceValue]}`;
+  panelContent.textContent = task ? task.content : '（无任务）';
 
   if (justFinished) {
-    endBadge.style.display = 'inline-block';
-    taskContent.classList.add('end-task');
-    closeBtn.textContent = '🎉 恭喜完成！';
+    panel.classList.add('task-panel-end');
   } else {
-    endBadge.style.display = 'none';
-    taskContent.classList.remove('end-task');
-    closeBtn.textContent = '我知道了，继续游戏';
+    panel.classList.remove('task-panel-end');
   }
 
-  taskContent.textContent = task ? task.content : '（无任务）';
-
-  const modal = document.getElementById('taskModal');
-  modal.classList.add('show');
+  panel.classList.add('show');
 }
 
-function closeTaskModal() {
-  document.getElementById('taskModal').classList.remove('show');
+function clearTaskPanel() {
+  const panel = document.getElementById('taskPanel');
+  panel.classList.remove('show', 'task-panel-end');
 }
 
 // ===== 游戏结束弹窗 =====
@@ -356,10 +350,10 @@ socket.on('dice-result', (data) => {
   // 滚动到新位置
   scrollToPlayer(newPosition);
 
-  // 如果有任务则显示弹窗（对所有玩家）
+  // 显示任务详情到侧边栏
   if (task) {
     setTimeout(() => {
-      showTaskModal({ playerEmoji, playerName, diceValue, newPosition, task, justFinished });
+      showTaskPanel({ playerEmoji, playerName, diceValue, newPosition, task, justFinished });
     }, 400);
   }
 });
@@ -372,6 +366,8 @@ socket.on('game-over', ({ rankings, roomState: finalState }) => {
 socket.on('game-reset', (state) => {
   // 隐藏结束弹窗
   document.getElementById('gameoverOverlay').classList.remove('show');
+  // 清除任务详情
+  clearTaskPanel();
   // 重新渲染（含房主按钮状态恢复）
   renderAll(state);
   // 滚动回起点

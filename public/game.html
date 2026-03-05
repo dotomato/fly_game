@@ -73,6 +73,14 @@
           </div>
         </div>
 
+        <!-- 任务详情 -->
+        <div class="side-section task-panel" id="taskPanel">
+          <h3>当前任务</h3>
+          <div class="task-panel-player" id="taskPanelPlayer"></div>
+          <div class="task-panel-cell" id="taskPanelCell"></div>
+          <div class="task-panel-content" id="taskPanelContent">等待玩家落子...</div>
+        </div>
+
         <!-- 日志 -->
         <div class="side-section" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding-bottom:0">
           <h3>游戏日志</h3>
@@ -83,20 +91,8 @@
     </div>
   </div>
 
-  <!-- 任务弹窗 -->
-  <div class="modal-overlay" id="taskModal">
-    <div class="modal-card">
-      <div class="modal-cell-num" id="modalCellNum"></div>
-      <div class="modal-player-info">
-        <span class="modal-player-emoji" id="modalPlayerEmoji"></span>
-        <span class="modal-player-name" id="modalPlayerName"></span>
-      </div>
-      <div class="modal-dice" id="modalDice"></div>
-      <div id="modalEndBadge" class="modal-end-badge" style="display:none">🏁 完成旅程</div>
-      <div class="modal-task-content" id="modalTaskContent"></div>
-      <button class="modal-btn" id="modalCloseBtn" onclick="closeTaskModal()">我知道了，继续游戏</button>
-    </div>
-  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="game.js"></script>
 
   <!-- 销毁房间确认弹窗 -->
   <div class="modal-overlay" id="destroyModal">
@@ -119,6 +115,8 @@
       <div style="font-size:14px;color:var(--gray-500);margin-bottom:24px">房主已解散房间，即将返回首页</div>
     </div>
   </div>
+
+  <!-- 游戏结束弹窗 -->
   <div class="gameover-overlay" id="gameoverOverlay">
     <div class="gameover-card">
       <div class="gameover-title">🎊 旅程结束！</div>
@@ -129,8 +127,5 @@
       </div>
     </div>
   </div>
-
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="game.js"></script>
 </body>
 </html>

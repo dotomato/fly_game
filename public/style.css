@@ -375,7 +375,7 @@ body {
 .cell {
   flex-shrink: 0;
   width: 72px;
-  height: 90px;
+  height: 86px;
   border-radius: var(--radius-sm);
   border: 1.5px solid var(--gray-200);
   background: white;
@@ -404,17 +404,17 @@ body {
   line-height: 1;
 }
 
-.cell-content-preview {
-  font-size: 9px;
-  color: var(--gray-500);
+.cell-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-600);
   text-align: center;
   padding: 0 2px;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  line-height: 1.3;
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
   word-break: break-all;
 }
 
@@ -620,6 +620,50 @@ body {
 .log-item:last-child {
   border-bottom: none;
   color: var(--gray-800);
+  font-weight: 500;
+}
+
+/* ========== 任务详情面板 ========== */
+.task-panel {
+  border-top: 2px solid var(--primary);
+  background: var(--primary-light);
+  transition: background 0.3s;
+}
+
+.task-panel.task-panel-end {
+  border-top-color: var(--danger);
+  background: var(--danger-light);
+}
+
+.task-panel-player {
+  font-size: 13px;
+  color: var(--gray-500);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.task-panel-player span {
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.task-panel-cell {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.task-panel.task-panel-end .task-panel-cell {
+  color: var(--danger);
+}
+
+.task-panel-content {
+  font-size: 14px;
+  color: var(--gray-800);
+  line-height: 1.7;
   font-weight: 500;
 }
 

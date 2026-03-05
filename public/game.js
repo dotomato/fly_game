@@ -100,10 +100,10 @@ function highlightCells(players, currentTurnIndex) {
 }
 
 // ===== 自动滚动到当前玩家格子 =====
-function scrollToPlayer(position) {
+function scrollToPlayer(position, instant = false) {
   const cellEl = document.getElementById(`cell-${position}`);
   if (!cellEl) return;
-  cellEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  cellEl.scrollIntoView({ behavior: instant ? 'instant' : 'smooth', inline: 'center', block: 'nearest' });
 }
 
 // ===== 渲染侧边玩家列表 =====
@@ -225,36 +225,39 @@ function animatePlayerMove(playerEmoji, fromPos, toPos, callback) {
     return;
   }
 
-  const fromRect = fromCell.getBoundingClientRect();
+  // 立即滚动（instant），确保目标格子已在视口内，位置稳定
+  scrollToPlayer(toPos, true);
 
-  // 创建飞行克隆
-  const clone = document.createElement('span');
-  clone.className = 'flying-emoji';
-  clone.textContent = playerEmoji;
-  clone.style.left = (fromRect.left + fromRect.width / 2 - 13) + 'px';
-  clone.style.top = (fromRect.top + fromRect.height / 2 - 13) + 'px';
-  document.body.appendChild(clone);
-
-  // 先滚动目标格子到视口
-  scrollToPlayer(toPos);
-
-  // 等两帧（滚动生效后）计算目标坐标
+  // 等两帧让布局稳定后，再取两端坐标
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      const freshToRect = toCell.getBoundingClientRect();
-      const dx = (freshToRect.left + freshToRect.width / 2 - 13)
-               - (fromRect.left + fromRect.width / 2 - 13);
-      const dy = (freshToRect.top + freshToRect.height / 2 - 13)
-               - (fromRect.top + fromRect.height / 2 - 13);
-      clone.style.transform = `translate(${dx}px, ${dy}px)`;
+      const fromRect = fromCell.getBoundingClientRect();
+      const toRect = toCell.getBoundingClientRect();
+
+      // 创建飞行克隆，起点精确对准源格子中心
+      const clone = document.createElement('span');
+      clone.className = 'flying-emoji';
+      clone.textContent = playerEmoji;
+      const startX = fromRect.left + fromRect.width / 2 - 13;
+      const startY = fromRect.top + fromRect.height / 2 - 13;
+      clone.style.left = startX + 'px';
+      clone.style.top = startY + 'px';
+      document.body.appendChild(clone);
+
+      // 下一帧触发过渡，translate 到目标中心
+      requestAnimationFrame(() => {
+        const dx = (toRect.left + toRect.width / 2 - 13) - startX;
+        const dy = (toRect.top + toRect.height / 2 - 13) - startY;
+        clone.style.transform = `translate(${dx}px, ${dy}px)`;
+      });
+
+      // 动画结束后执行回调
+      setTimeout(() => {
+        clone.remove();
+        callback();
+      }, 680);
     });
   });
-
-  // 动画结束后执行回调
-  setTimeout(() => {
-    clone.remove();
-    callback();
-  }, 660);
 }
 
 // ===== 掷骰子 =====

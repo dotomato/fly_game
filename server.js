@@ -354,6 +354,22 @@ io.on('connection', (socket) => {
     io.to(roomId).emit('chat-message', chatMsg);
   });
 
+  // 语音消息（仅中转广播，不存储）
+  socket.on('voice-message', ({ roomId, audio, duration }) => {
+    const room = rooms.get(roomId);
+    if (!room || room.status === 'waiting') return;
+    const player = room.players.find(p => p.socketId === socket.id);
+    if (!player) return;
+    duration = Math.max(1, Math.min(60, parseInt(duration) || 1));
+    io.to(roomId).emit('voice-message', {
+      playerEmoji: player.emoji,
+      playerName: player.name,
+      audio,
+      duration,
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // 断线处理（带宽限期，防止页面跳转时的竞态）
   socket.on('disconnect', () => {
     console.log(`[断线] ${socket.id}`);

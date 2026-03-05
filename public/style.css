@@ -1050,6 +1050,111 @@ body {
   background: var(--primary-dark);
 }
 
+/* ===== 语音消息 ===== */
+
+/* 麦克风按钮 */
+.chat-voice-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gray-200);
+  background: white;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  -webkit-user-select: none;
+  user-select: none;
+  padding: 0;
+}
+
+.chat-voice-btn:hover {
+  border-color: var(--primary);
+}
+
+.chat-voice-btn.recording {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: white;
+  animation: pulse-record 0.8s ease-in-out infinite;
+}
+
+@keyframes pulse-record {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+/* 语音消息气泡 */
+.voice-bubble {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  min-width: 100px;
+}
+
+.voice-play-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.35);
+  color: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.chat-msg.theirs .voice-play-btn {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* 波形装饰 */
+.voice-wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 16px;
+}
+
+.wave-bar {
+  width: 3px;
+  background: currentColor;
+  border-radius: 2px;
+  opacity: 0.5;
+}
+
+.wave-bar:nth-child(1) { height: 5px; }
+.wave-bar:nth-child(2) { height: 10px; }
+.wave-bar:nth-child(3) { height: 14px; }
+.wave-bar:nth-child(4) { height: 10px; }
+.wave-bar:nth-child(5) { height: 6px; }
+
+.voice-bubble.playing .wave-bar {
+  animation: wave-anim 0.6s ease-in-out infinite alternate;
+}
+.voice-bubble.playing .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+.voice-bubble.playing .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+.voice-bubble.playing .wave-bar:nth-child(4) { animation-delay: 0.1s; }
+
+@keyframes wave-anim {
+  0%   { transform: scaleY(0.4); opacity: 0.5; }
+  100% { transform: scaleY(1);   opacity: 1; }
+}
+
+.voice-duration {
+  font-size: 11px;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
 /* 响应式 */
 @media (max-width: 768px) {
   .side-panel {

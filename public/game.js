@@ -17,6 +17,13 @@ let mySocketId = null;
 let isRolling = false;
 let tasksData = [];
 
+// ===== 语音录制状态 =====
+let voiceRecorder = null;
+let voiceChunks = [];
+let voiceStartTime = 0;
+let voiceTimerHandle = null;
+const MAX_VOICE_SECONDS = 60;
+
 // 骰子数字映射
 const DICE_FACES = ['', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣'];
 
@@ -282,6 +289,154 @@ function clearTaskPanel() {
 // ===== 聊天 =====
 function initChat() {
   appendChatMessage({ system: true, message: '聊天室已开启，说点什么吧～' });
+  initVoiceBtn();
+}
+
+function initVoiceBtn() {
+  const btn = document.getElementById('voiceBtn');
+  if (!btn) return;
+  btn.addEventListener('mousedown', startVoiceRecord);
+  btn.addEventListener('mouseup', stopVoiceRecord);
+  btn.addEventListener('mouseleave', cancelVoiceRecord);
+  btn.addEventListener('touchstart', e => { e.preventDefault(); startVoiceRecord(); }, { passive: false });
+  btn.addEventListener('touchend', e => { e.preventDefault(); stopVoiceRecord(); }, { passive: false });
+  btn.addEventListener('touchcancel', cancelVoiceRecord);
+}
+
+async function startVoiceRecord() {
+  if (voiceRecorder) return;
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    appendChatMessage({ system: true, message: '无法访问麦克风，请检查浏览器权限' });
+    return;
+  }
+  const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/wav']
+    .find(t => MediaRecorder.isTypeSupported(t)) || '';
+  voiceChunks = [];
+  voiceStartTime = Date.now();
+  voiceRecorder = new MediaRecorder(stream, {
+    ...(mimeType ? { mimeType } : {}),
+    audioBitsPerSecond: 16000
+  });
+  voiceRecorder.ondataavailable = e => { if (e.data.size > 0) voiceChunks.push(e.data); };
+  voiceRecorder.start(100);
+  const btn = document.getElementById('voiceBtn');
+  btn.classList.add('recording');
+  btn.title = '松开发送';
+  voiceTimerHandle = setTimeout(() => stopVoiceRecord(), MAX_VOICE_SECONDS * 1000);
+}
+
+function stopVoiceRecord() {
+  if (!voiceRecorder || voiceRecorder.state === 'inactive') return;
+  clearTimeout(voiceTimerHandle);
+  const recorderRef = voiceRecorder;
+  const chunksRef = voiceChunks.slice();
+  const startRef = voiceStartTime;
+  recorderRef.onstop = () => {
+    const duration = Math.max(1, Math.round((Date.now() - startRef) / 1000));
+    if (duration < 1) {
+      appendChatMessage({ system: true, message: '录音太短，未发送' });
+      return;
+    }
+    const mimeType = recorderRef.mimeType || 'audio/webm';
+    const blob = new Blob(chunksRef, { type: mimeType });
+    blob.arrayBuffer().then(buf => {
+      socket.emit('voice-message', { roomId: ROOM_ID, audio: buf, duration });
+    });
+  };
+  recorderRef.stream.getTracks().forEach(t => t.stop());
+  recorderRef.stop();
+  resetVoiceState();
+}
+
+function cancelVoiceRecord() {
+  if (!voiceRecorder || voiceRecorder.state === 'inactive') return;
+  clearTimeout(voiceTimerHandle);
+  voiceRecorder.stream.getTracks().forEach(t => t.stop());
+  voiceRecorder.stop();
+  resetVoiceState();
+}
+
+function resetVoiceState() {
+  voiceRecorder = null;
+  voiceChunks = [];
+  voiceStartTime = 0;
+  const btn = document.getElementById('voiceBtn');
+  if (btn) { btn.classList.remove('recording'); btn.title = '按住说话'; }
+}
+
+function appendVoiceMessage({ playerEmoji, playerName, audio, duration, timestamp, isMine }) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + (isMine ? 'mine' : 'theirs');
+
+  const meta = document.createElement('div');
+  meta.className = 'chat-msg-meta';
+  const timeStr = formatChatTime(timestamp);
+  meta.textContent = isMine ? timeStr : `${playerEmoji} ${playerName}  ${timeStr}`;
+
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-msg-bubble voice-bubble';
+
+  const playBtn = document.createElement('button');
+  playBtn.className = 'voice-play-btn';
+  playBtn.textContent = '▶';
+
+  const wave = document.createElement('span');
+  wave.className = 'voice-wave';
+  for (let i = 0; i < 5; i++) {
+    const bar = document.createElement('span');
+    bar.className = 'wave-bar';
+    wave.appendChild(bar);
+  }
+
+  const durationSpan = document.createElement('span');
+  durationSpan.className = 'voice-duration';
+  durationSpan.textContent = duration + '"';
+
+  bubble.appendChild(playBtn);
+  bubble.appendChild(wave);
+  bubble.appendChild(durationSpan);
+  div.appendChild(meta);
+  div.appendChild(bubble);
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+
+  // 用于确定 Blob 类型（服务端不传 mimeType，尝试 webm 回退 wav）
+  const mimeType = ['audio/webm', 'audio/wav'].find(t => {
+    try { return !!new Audio(); } catch (e) { return false; }
+  }) || 'audio/webm';
+
+  let audioObj = null;
+  let playing = false;
+
+  playBtn.onclick = () => {
+    if (playing) {
+      audioObj && audioObj.pause();
+      playing = false;
+      playBtn.textContent = '▶';
+      bubble.classList.remove('playing');
+      return;
+    }
+    const blob = new Blob([audio], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    audioObj = new Audio(url);
+    audioObj.onended = () => {
+      playing = false;
+      playBtn.textContent = '▶';
+      bubble.classList.remove('playing');
+      URL.revokeObjectURL(url);
+    };
+    audioObj.play().catch(() => {
+      appendChatMessage({ system: true, message: '语音播放失败，浏览器可能不支持此格式' });
+      URL.revokeObjectURL(url);
+    });
+    playing = true;
+    playBtn.textContent = '⏹';
+    bubble.classList.add('playing');
+  };
 }
 
 function appendChatMessage({ system = false, playerEmoji, playerName, message, timestamp, isMine = false }) {
@@ -468,6 +623,12 @@ socket.on('chat-message', (data) => {
   const myPlayer = roomState?.players?.find(p => p.socketId === mySocketId);
   const isMine = myPlayer && myPlayer.emoji === data.playerEmoji && myPlayer.name === data.playerName;
   appendChatMessage({ ...data, isMine });
+});
+
+socket.on('voice-message', (data) => {
+  const myPlayer = roomState?.players?.find(p => p.socketId === mySocketId);
+  const isMine = myPlayer && myPlayer.emoji === data.playerEmoji && myPlayer.name === data.playerName;
+  appendVoiceMessage({ ...data, isMine });
 });
 
 socket.on('room-destroyed', ({ message }) => {

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>情侣飞行棋</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .emoji-preview {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .emoji-badge {
+      font-size: 22px;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--gray-100);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .max-note {
+      font-size: 13px;
+      color: var(--gray-400);
+      margin-top: 6px;
+    }
+    .select-wrapper {
+      position: relative;
+    }
+    .select-wrapper select {
+      padding-right: 32px;
+    }
+    .select-wrapper::after {
+      content: '▾';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray-400);
+      pointer-events: none;
+    }
+    .divider {
+      border: none;
+      border-top: 1px solid var(--gray-100);
+      margin: 24px 0;
+    }
+    .join-form {
+      display: none;
+    }
+    .join-form.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="lobby-container">
+    <div class="lobby-card">
+
+      <!-- 标题 -->
+      <div class="lobby-header">
+        <h1>💕 情侣飞行棋</h1>
+        <p>与最爱的人一起踏上这段旅程</p>
+      </div>
+
+      <!-- 加入/创建表单 -->
+      <div id="joinForm" class="join-form active">
+        <div class="form-group">
+          <label for="playerName">你的名字</label>
+          <input type="text" id="playerName" placeholder="输入你的名字" maxlength="12" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label for="roomId">房间 ID</label>
+          <input type="text" id="roomId" placeholder="输入自定义房间ID（与伴侣保持一致）" maxlength="20" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label for="maxPlayers">最多玩家数</label>
+          <div class="select-wrapper">
+            <select id="maxPlayers">
+              <option value="2">2 人</option>
+              <option value="3">3 人</option>
+              <option value="4" selected>4 人</option>
+            </select>
+          </div>
+          <p class="max-note">注：房间创建后此设置不可更改</p>
+        </div>
+        <div class="form-group">
+          <label>玩家棋子（按加入顺序分配）</label>
+          <div class="emoji-preview">
+            <div class="emoji-badge">❤️</div>
+            <div class="emoji-badge">💙</div>
+            <div class="emoji-badge">💚</div>
+            <div class="emoji-badge">💛</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="joinBtn" onclick="joinRoom()">加入 / 创建房间</button>
+        <div class="error-msg" id="joinError"></div>
+      </div>
+
+      <!-- 等待室 -->
+      <div id="waitingRoom" class="waiting-room">
+        <div class="room-info">
+          <span>🚪 房间：</span>
+          <span class="room-id-display" id="roomIdDisplay">—</span>
+          <span id="roomCountDisplay" style="margin-left:auto;font-size:13px;color:var(--gray-500)"></span>
+        </div>
+        <div class="form-group">
+          <label>等待玩家加入</label>
+          <ul class="player-list" id="playerList"></ul>
+        </div>
+        <p class="waiting-tip" id="waitingTip">等待其他玩家加入...</p>
+        <button class="btn btn-success" id="startBtn" onclick="startGame()" disabled>开始游戏</button>
+        <div class="error-msg" id="waitError"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let myRoomId = null;
+    let myPlayerIndex = null;
+    let isHost = false;
+    let currentRoomState = null;
+
+    // 自动聚焦
+    document.getElementById('playerName').focus();
+
+    // 回车跳转
+    document.getElementById('playerName').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('roomId').focus();
+    });
+    document.getElementById('roomId').addEventListener('keydown', e => {
+      if (e.key === 'Enter') joinRoom();
+    });
+
+    function showError(elId, msg) {
+      const el = document.getElementById(elId);
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 4000);
+    }
+
+    function joinRoom() {
+      const playerName = document.getElementById('playerName').value.trim();
+      const roomId = document.getElementById('roomId').value.trim();
+      const maxPlayers = parseInt(document.getElementById('maxPlayers').value);
+
+      if (!playerName) { showError('joinError', '请输入你的名字'); return; }
+      if (!roomId) { showError('joinError', '请输入房间ID'); return; }
+
+      document.getElementById('joinBtn').disabled = true;
+      document.getElementById('joinBtn').textContent = '连接中...';
+
+      socket.emit('join-room', { roomId, playerName, maxPlayers });
+    }
+
+    function startGame() {
+      if (!myRoomId) return;
+      socket.emit('start-game', { roomId: myRoomId });
+    }
+
+    // 服务器响应：成功加入
+    socket.on('joined', ({ roomId, playerIndex }) => {
+      myRoomId = roomId;
+      myPlayerIndex = playerIndex;
+      document.getElementById('joinForm').classList.remove('active');
+      document.getElementById('waitingRoom').classList.add('active');
+      document.getElementById('roomIdDisplay').textContent = roomId;
+    });
+
+    // 房间状态更新
+    socket.on('room-update', (state) => {
+      currentRoomState = state;
+      isHost = state.hostId === socket.id;
+      renderWaitingRoom(state);
+    });
+
+    // 游戏开始，跳转到游戏页
+    socket.on('game-started', (state) => {
+      const playerName = document.getElementById('playerName').value.trim();
+      const url = `/game.html?roomId=${encodeURIComponent(myRoomId)}&name=${encodeURIComponent(playerName)}&idx=${myPlayerIndex}`;
+      // 主动断开旧 socket，避免跳转后旧连接触发断线逻辑
+      socket.disconnect();
+      window.location.href = url;
+    });
+
+    // 错误
+    socket.on('error', ({ message }) => {
+      document.getElementById('joinBtn').disabled = false;
+      document.getElementById('joinBtn').textContent = '加入 / 创建房间';
+      showError('joinError', message);
+    });
+
+    function renderWaitingRoom(state) {
+      const list = document.getElementById('playerList');
+      list.innerHTML = '';
+      state.players.forEach((p, i) => {
+        const li = document.createElement('li');
+        li.className = 'player-item';
+        const isMe = p.socketId === socket.id;
+        li.innerHTML = `
+          <span class="player-emoji">${p.emoji}</span>
+          <span class="player-name">${escapeHtml(p.name)}${isMe ? ' <span style="font-size:12px;color:var(--gray-400)">(我)</span>' : ''}</span>
+          ${i === 0 ? '<span class="host-badge">房主</span>' : ''}
+        `;
+        list.appendChild(li);
+      });
+
+      document.getElementById('roomCountDisplay').textContent = `${state.players.length}/${state.maxPlayers} 人`;
+
+      const startBtn = document.getElementById('startBtn');
+      if (isHost) {
+        startBtn.disabled = state.players.length < 2;
+        startBtn.textContent = state.players.length < 2
+          ? `等待更多玩家（至少2人）`
+          : `开始游戏 (${state.players.length}人)`;
+      } else {
+        startBtn.disabled = true;
+        startBtn.textContent = '等待房主开始游戏...';
+      }
+
+      document.getElementById('waitingTip').textContent = isHost
+        ? (state.players.length < 2 ? '等待其他玩家加入...' : '人数满足，可以开始了！')
+        : `等待房主（${state.players[0]?.name || ''}）开始游戏...`;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+  </script>
+</body>
+</html>

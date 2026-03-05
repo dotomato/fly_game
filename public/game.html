@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>情侣飞行棋 - 游戏中</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="game-layout">
+
+    <!-- 顶部栏 -->
+    <header class="game-header">
+      <h1>💕 情侣飞行棋</h1>
+      <div class="turn-indicator" id="turnIndicator">等待游戏开始...</div>
+      <button class="btn-home" onclick="confirmHome()">← 首页</button>
+    </header>
+
+    <!-- 返回首页确认弹窗 -->
+    <div class="modal-overlay" id="homeModal">
+      <div class="modal-card" style="max-width:360px">
+        <div style="font-size:28px;margin-bottom:12px">🚪</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px">返回首页？</div>
+        <div style="font-size:14px;color:var(--gray-500);margin-bottom:24px">离开后你的位置将在8秒后自动退出游戏</div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" style="flex:1" onclick="goHome()">确认离开</button>
+          <button class="btn" style="flex:1;background:var(--gray-100);color:var(--gray-700)" onclick="closeHomeModal()">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主体 -->
+    <div class="game-body">
+
+      <!-- 棋盘区 -->
+      <div class="board-area">
+        <div class="board-scroll-container" id="boardScrollContainer">
+          <div class="board-track" id="boardTrack">
+            <!-- 起点格 -->
+            <div class="cell start-cell" id="cell-0">
+              <div class="cell-number">起点</div>
+              <div class="cell-players" id="players-0"></div>
+            </div>
+            <!-- 1-80格由JS动态生成 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 侧边面板 -->
+      <aside class="side-panel">
+
+        <!-- 玩家列表 -->
+        <div class="side-section">
+          <h3>玩家</h3>
+          <ul class="side-player-list" id="sidePlayerList"></ul>
+        </div>
+
+        <!-- 骰子 -->
+        <div class="side-section">
+          <h3>骰子</h3>
+          <div class="dice-area">
+            <div class="dice-display" id="diceDisplay">🎲</div>
+            <button class="btn btn-primary" id="rollBtn" disabled onclick="rollDice()">掷骰子</button>
+          </div>
+        </div>
+
+        <!-- 房主操作区 -->
+        <div class="side-section host-section" id="hostSection" style="display:none">
+          <h3>房主操作</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-warning" id="sideResetBtn" onclick="resetGame()">↺ 重置游戏</button>
+            <button class="btn btn-danger" id="sideDestroyBtn" onclick="confirmDestroy()">✕ 销毁房间</button>
+          </div>
+        </div>
+
+        <!-- 日志 -->
+        <div class="side-section" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding-bottom:0">
+          <h3>游戏日志</h3>
+        </div>
+        <div class="game-log" id="gameLog"></div>
+
+      </aside>
+    </div>
+  </div>
+
+  <!-- 任务弹窗 -->
+  <div class="modal-overlay" id="taskModal">
+    <div class="modal-card">
+      <div class="modal-cell-num" id="modalCellNum"></div>
+      <div class="modal-player-info">
+        <span class="modal-player-emoji" id="modalPlayerEmoji"></span>
+        <span class="modal-player-name" id="modalPlayerName"></span>
+      </div>
+      <div class="modal-dice" id="modalDice"></div>
+      <div id="modalEndBadge" class="modal-end-badge" style="display:none">🏁 完成旅程</div>
+      <div class="modal-task-content" id="modalTaskContent"></div>
+      <button class="modal-btn" id="modalCloseBtn" onclick="closeTaskModal()">我知道了，继续游戏</button>
+    </div>
+  </div>
+
+  <!-- 销毁房间确认弹窗 -->
+  <div class="modal-overlay" id="destroyModal">
+    <div class="modal-card" style="max-width:360px">
+      <div style="font-size:28px;margin-bottom:12px">💥</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px">销毁房间？</div>
+      <div style="font-size:14px;color:var(--gray-500);margin-bottom:24px">所有玩家将被踢出，游戏数据立即清除，此操作不可撤销</div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-danger" style="flex:1" onclick="doDestroyRoom()">确认销毁</button>
+        <button class="btn" style="flex:1;background:var(--gray-100);color:var(--gray-700)" onclick="closeDestroyModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 房间已销毁提示弹窗 -->
+  <div class="modal-overlay" id="destroyedModal">
+    <div class="modal-card" style="max-width:360px">
+      <div style="font-size:28px;margin-bottom:12px">🚪</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px">房间已解散</div>
+      <div style="font-size:14px;color:var(--gray-500);margin-bottom:24px">房主已解散房间，即将返回首页</div>
+    </div>
+  </div>
+  <div class="gameover-overlay" id="gameoverOverlay">
+    <div class="gameover-card">
+      <div class="gameover-title">🎊 旅程结束！</div>
+      <div class="gameover-subtitle">恭喜所有人完成了这段美好旅程</div>
+      <ul class="ranking-list" id="rankingList"></ul>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="btn btn-primary" onclick="window.location.href='/'">返回大厅</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

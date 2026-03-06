@@ -44,7 +44,6 @@ async function initBoard() {
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.id = `cell-${i}`;
-    if (i >= tasksData.length - 4) cell.classList.add('end-cell');
 
     const task = tasksData[i - 1];
     const titleText = task ? task.title : '';

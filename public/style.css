@@ -506,30 +506,6 @@ body {
   color: var(--primary);
 }
 
-.cell.end-cell {
-  background: var(--danger-light);
-  border-color: var(--danger);
-}
-
-.cell.end-cell .cell-number {
-  color: var(--danger);
-  font-weight: 700;
-}
-
-.cell.end-cell::after {
-  content: 'END';
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 8px;
-  font-weight: 800;
-  color: white;
-  background: var(--danger);
-  padding: 1px 3px;
-  border-radius: 3px;
-  line-height: 1.3;
-}
-
 .cell.active-cell {
   border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(59,130,246,0.3);

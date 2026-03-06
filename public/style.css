@@ -987,6 +987,11 @@ body {
   max-width: 100%;
 }
 
+.chat-msg.system.task-msg {
+  width: 100%;
+  align-items: stretch;
+}
+
 .chat-msg-meta {
   font-size: 10px;
   color: var(--gray-400);
@@ -1029,8 +1034,9 @@ body {
   background: var(--gray-50);
   border-radius: 8px;
   padding: 5px 10px;
-  width: 90%;
+  width: 100%;
   max-width: none;
+  box-sizing: border-box;
   line-height: 1.5;
   white-space: pre-wrap;
 }

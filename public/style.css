@@ -1203,6 +1203,36 @@ body {
 
   .game-header {
     padding: 8px 14px;
+    gap: 6px;
+  }
+
+  .game-header h1 {
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .game-header h1 .header-title-text {
+    display: none;
+  }
+
+  .turn-indicator {
+    font-size: 12px;
+    padding: 4px 8px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    text-align: center;
+  }
+
+  .turn-indicator.my-turn {
+    font-size: 13px;
+  }
+
+  .btn-home {
+    padding: 5px 9px;
+    font-size: 12px;
   }
 
   .board-scroll-container {

@@ -75,7 +75,7 @@ const rooms = new Map();
 // 断线宽限期计时器: Map<socketId, timeoutHandle>
 // 玩家断线后不立即处理，等待 REJOIN_GRACE_MS 内是否重连
 const disconnectTimers = new Map();
-const REJOIN_GRACE_MS = 8000; // 8秒宽限期
+const REJOIN_GRACE_MS = 5 * 60 * 1000; // 5分钟宽限期
 
 const EMOJIS = ['🐱', '🐶', '🐰', '🦊'];
 const ALLOWED_EMOJIS = ['🐱','🐶','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐸','🐧','🐦','🦆','🦋','🐙','🦄','🐲','🌸','🌺','🌻','🌼','🌹','🍀','🌵','🍄','🎋','🍎','🍊','🍋','🍇','🍓','🍑','🍕','🍔','🍜','🍣','🍦','🧁','🍩','☕','🍅'];

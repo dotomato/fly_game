@@ -12,6 +12,10 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
+// 聊天记录保存目录
+const CHAT_LOGS_DIR = path.join(__dirname, 'data/chat_logs');
+if (!fs.existsSync(CHAT_LOGS_DIR)) fs.mkdirSync(CHAT_LOGS_DIR, { recursive: true });
+
 // 动态加载所有剧本（扫描 data/scripts/*.json，每个文件含 id/name/desc/tasks）
 const SCRIPTS_DIR = path.join(__dirname, 'data/scripts');
 const scriptsMap = new Map();   // id -> { id, name, desc, tasks }
@@ -125,16 +129,46 @@ function nextTurn(room) {
   }
 }
 
+// 保存聊天记录到文件
+function saveChatLog(room, roomId) {
+  try {
+    const now = new Date();
+    const ts = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const safeRoomId = roomId.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `${ts}_${safeRoomId}.json`;
+    const filePath = path.join(CHAT_LOGS_DIR, filename);
+
+    const script = scriptsMap.get(room.scriptId);
+    const data = {
+      roomId,
+      scriptId: room.scriptId,
+      scriptName: script ? script.name : room.scriptId,
+      startedAt: room.startedAt || null,
+      endedAt: now.toISOString(),
+      players: room.players.map(p => ({ name: p.name, emoji: p.emoji, finishOrder: p.finishOrder })),
+      messages: room.chatMessages,
+      log: room.log,
+    };
+
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    console.log(`[聊天记录] 已保存 -> ${filename}`);
+  } catch (e) {
+    console.error('[聊天记录] 保存失败:', e.message);
+  }
+}
+
 // 结束游戏：设置状态、广播排名
 function finishGame(room, roomId) {
   room.status = 'finished';
   room.waitingConfirm = false;
   room.log.push('🎊 所有玩家完成旅程！游戏结束！');
+  room.chatMessages.push({ system: true, message: '🎊 所有玩家完成旅程！游戏结束！', timestamp: new Date().toISOString() });
   const rankings = room.players
     .filter(p => p.isFinished)
     .sort((a, b) => a.finishOrder - b.finishOrder)
     .map(p => ({ name: p.name, emoji: p.emoji, order: p.finishOrder }));
   io.to(roomId).emit('game-over', { rankings, roomState: getRoomPublicState(room) });
+  saveChatLog(room, roomId);
   console.log(`[游戏结束] 房间 ${roomId}`);
 }
 
@@ -260,6 +294,8 @@ io.on('connection', (socket) => {
     room.currentTurnIndex = room.players.findIndex(p => p.socketId === room.hostId);
     if (room.currentTurnIndex === -1) room.currentTurnIndex = 0;
     room.log.push('游戏开始！');
+    room.startedAt = new Date().toISOString();
+    room.chatMessages.push({ system: true, message: '🎮 游戏开始！', timestamp: room.startedAt });
     const firstPlayer = room.players[room.currentTurnIndex];
     room.log.push(`轮到 ${firstPlayer.emoji} ${firstPlayer.name} 掷骰子`);
 
@@ -361,6 +397,18 @@ io.on('connection', (socket) => {
       justFinished,
       roomState: getRoomPublicState(room)
     });
+
+    // 将落子系统消息写入 chatMessages，供聊天记录保存
+    if (task) {
+      const finishTag = justFinished ? ' 🏁' : '';
+      const sysMsg = {
+        system: true,
+        message: `${currentPlayer.emoji} ${currentPlayer.name} 落在第 ${newPosition} 格${finishTag}\n📋 ${task.content}`,
+        timestamp: new Date().toISOString()
+      };
+      room.chatMessages.push(sysMsg);
+      if (room.chatMessages.length > 200) room.chatMessages.shift();
+    }
 
     // 全部玩家已完成时，仍保持 waitingConfirm=true，等最后一个玩家确认后再结束
   });

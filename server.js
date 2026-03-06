@@ -7,7 +7,9 @@ const fs = require('fs');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: '*' }
+  cors: { origin: '*' },
+  pingTimeout: 2 * 60 * 1000,  // 2分钟无心跳才断线
+  pingInterval: 25000           // 每25秒发一次心跳
 });
 
 const PORT = process.env.PORT || 3000;

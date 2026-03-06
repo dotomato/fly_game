@@ -183,7 +183,8 @@ function clearRoomTimers(room) {
 }
 
 io.on('connection', (socket) => {
-  console.log(`[连接] ${socket.id}`);
+  const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
+  console.log(`[连接] ${socket.id}  ip=${ip}`);
 
   // 加入房间
   socket.on('join-room', ({ roomId, playerName, maxPlayers, scriptId, emoji, joinOnly }) => {
@@ -235,6 +236,9 @@ io.on('connection', (socket) => {
           clearTimeout(disconnectTimers.get(oldSocketId));
           disconnectTimers.delete(oldSocketId);
           room.log.push(`${existingByName.emoji} ${existingByName.name} 重新连接了`);
+          console.log(`[重连] ${existingByName.emoji}${existingByName.name}  房间=${roomId}  旧socketId=${oldSocketId}  新socketId=${socket.id}`);
+        } else {
+          console.log(`[重新加入] ${existingByName.emoji}${existingByName.name}  房间=${roomId}  socketId=${socket.id}`);
         }
         existingByName.socketId = socket.id;
         socket.join(roomId);
@@ -272,7 +276,7 @@ io.on('connection', (socket) => {
     socket.emit('joined', { roomId, playerIndex: room.players.length - 1 });
     room.log.push(`${player.emoji} ${player.name} 加入了房间`);
     io.to(roomId).emit('room-update', getRoomPublicState(room));
-    console.log(`[加入房间] ${playerName} -> ${roomId}`);
+    console.log(`[加入房间] ${player.emoji}${playerName}  房间=${roomId}  socketId=${socket.id}`);
   });
 
   // 开始游戏（仅房主）
@@ -482,12 +486,12 @@ io.on('connection', (socket) => {
 
   // 断线处理（带宽限期，防止页面跳转时的竞态）
   socket.on('disconnect', () => {
-    console.log(`[断线] ${socket.id}`);
     for (const [roomId, room] of rooms.entries()) {
       const playerIndex = room.players.findIndex(p => p.socketId === socket.id);
       if (playerIndex === -1) continue;
 
       const player = room.players[playerIndex];
+      console.log(`[断线] ${socket.id}  玩家=${player.emoji}${player.name}  房间=${roomId}  状态=${room.status}`);
 
       if (room.status === 'waiting') {
         // 等待中直接移除，无需宽限期
@@ -512,7 +516,7 @@ io.on('connection', (socket) => {
           // 宽限期结束，检查玩家是否已用新 socket 重连（socketId 已变）
           if (player.socketId !== socket.id) return;
 
-          console.log(`[超时断线] ${player.name}`);
+          console.log(`[超时断线] ${player.emoji}${player.name}  房间=${roomId}  socketId=${socket.id}`);
           const idx = room.players.findIndex(p => p.socketId === socket.id);
           if (idx === -1 || room.status !== 'playing') return;
 

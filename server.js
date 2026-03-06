@@ -320,9 +320,9 @@ io.on('connection', (socket) => {
     currentPlayer.position = newPosition;
     const task = scriptTasks[newPosition - 1] || null;
 
-    // 判断是否结束
+    // 判断是否到达终点（必须到达最后一格才算完成）
     let justFinished = false;
-    if (task && task.hasEnd) {
+    if (newPosition === maxPosition && !currentPlayer.isFinished) {
       currentPlayer.finishOrder = room.players.filter(p => p.isFinished).length + 1;
       currentPlayer.isFinished = true;
       justFinished = true;

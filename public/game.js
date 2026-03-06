@@ -554,6 +554,12 @@ function doDestroyRoom() {
 }
 
 // ===== 返回首页 =====
+function reconnect() {
+  if (ROOM_ID && MY_NAME) {
+    socket.emit('join-room', { roomId: ROOM_ID, playerName: MY_NAME, maxPlayers: 0 });
+  }
+}
+
 function confirmHome() {
   document.getElementById('homeModal').classList.add('show');
 }

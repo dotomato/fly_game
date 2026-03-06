@@ -13,7 +13,10 @@
     <header class="game-header">
       <h1>💕 情侣飞行棋</h1>
       <div class="turn-indicator" id="turnIndicator">等待游戏开始...</div>
-      <button class="btn-home" onclick="confirmHome()">← 首页</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-home" onclick="reconnect()" title="重新连接">⟳</button>
+        <button class="btn-home" onclick="confirmHome()">← 首页</button>
+      </div>
     </header>
 
     <!-- 返回首页确认弹窗 -->
@@ -21,7 +24,7 @@
       <div class="modal-card" style="max-width:360px">
         <div style="font-size:28px;margin-bottom:12px">🚪</div>
         <div style="font-size:18px;font-weight:700;margin-bottom:8px">返回首页？</div>
-        <div style="font-size:14px;color:var(--gray-500);margin-bottom:24px">离开后你的位置将在8秒后自动退出游戏</div>
+        <div style="font-size:14px;color:var(--gray-500);margin-bottom:24px">离开后你的位置将在5分钟后自动退出游戏</div>
         <div style="display:flex;gap:10px">
           <button class="btn btn-primary" style="flex:1" onclick="goHome()">确认离开</button>
           <button class="btn" style="flex:1;background:var(--gray-100);color:var(--gray-700)" onclick="closeHomeModal()">取消</button>

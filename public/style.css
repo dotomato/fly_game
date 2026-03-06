@@ -924,6 +924,34 @@ body {
   padding: 6px 12px 4px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-save-btn {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-light);
+  border: 1px solid rgba(59,130,246,0.25);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.6;
+}
+
+.chat-save-btn:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.chat-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .chat-messages {

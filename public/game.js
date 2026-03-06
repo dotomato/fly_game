@@ -679,6 +679,67 @@ socket.on('error', ({ message }) => {
   alert('错误：' + message);
 });
 
+// ===== 保存聊天记录为截图 =====
+async function saveChatSnapshot() {
+  const btn = document.querySelector('.chat-save-btn');
+  const container = document.getElementById('chatMessages');
+  if (!container || container.children.length === 0) {
+    alert('暂无聊天记录');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '生成中...';
+
+  try {
+    // 克隆消息容器，撑开全部高度（不受滚动裁剪）
+    const clone = container.cloneNode(true);
+    clone.style.cssText = `
+      position: fixed;
+      left: -9999px;
+      top: 0;
+      width: ${container.offsetWidth}px;
+      height: auto;
+      overflow: visible;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 12px;
+      background: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    `;
+
+    // 加标题行
+    const header = document.createElement('div');
+    header.style.cssText = 'font-size:13px;font-weight:700;color:#6B7280;padding-bottom:8px;border-bottom:1px solid #E5E7EB;margin-bottom:4px;';
+    header.textContent = '💬 聊天记录 · ' + new Date().toLocaleString('zh-CN', { hour12: false });
+    clone.insertBefore(header, clone.firstChild);
+
+    document.body.appendChild(clone);
+
+    const canvas = await html2canvas(clone, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+
+    document.body.removeChild(clone);
+
+    // 下载
+    const link = document.createElement('a');
+    link.download = `聊天记录_${new Date().toLocaleString('zh-CN', { hour12: false }).replace(/[/:]/g, '-').replace(/\s/g, '_')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (e) {
+    console.error('截图失败', e);
+    alert('截图失败，请重试');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '保存';
+}
+
 // ===== 初始化 =====
 initBoard().then(() => {
   initChat();

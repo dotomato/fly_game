@@ -59,7 +59,7 @@
 
         <!-- 聊天框（常驻） -->
         <div class="chat-box" id="chatBox">
-          <div class="chat-label">💬 聊天</div>
+          <div class="chat-label">💬 聊天 <button class="chat-save-btn" onclick="saveChatSnapshot()" title="保存聊天记录为图片">保存</button></div>
           <div class="chat-messages" id="chatMessages"></div>
           <div class="chat-input-row">
             <button class="chat-voice-btn" id="voiceBtn" title="按住说话">🎤</button>
@@ -100,6 +100,7 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="game.js"></script>
 
   <!-- 销毁房间确认弹窗 -->

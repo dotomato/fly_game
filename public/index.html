@@ -119,6 +119,7 @@
     let myPlayerIndex = null;
     let isHost = false;
     let currentRoomState = null;
+    let joinSent = false; // 防止 Socket.io 重连时重复发 join-room
     let scriptsIndex = []; // 从服务端加载的剧本列表
 
     // 动态加载剧本选项
@@ -215,6 +216,7 @@
       setCookie('playerName', playerName, 30);
 
       const selectedEmoji = document.querySelector('.emoji-option.selected')?.dataset.emoji || '🐱';
+      joinSent = true;
       socket.emit('join-room', { roomId, playerName, maxPlayers: 4, scriptId: document.getElementById('scriptId').value, emoji: selectedEmoji, joinOnly: isJoining });
     }
 
@@ -265,6 +267,11 @@
     socket.on('room-update', (state) => {
       currentRoomState = state;
       isHost = state.hostId === socket.id;
+      // 重连时 room-update 可能早于 joined 到达，确保等待室界面已显示
+      if (state.status === 'waiting' && myRoomId) {
+        document.getElementById('joinForm').classList.remove('active');
+        document.getElementById('waitingRoom').classList.add('active');
+      }
       renderWaitingRoom(state);
     });
 

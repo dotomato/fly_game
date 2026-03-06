@@ -166,6 +166,10 @@
         document.getElementById('lobbySubtitle').textContent = `房间号：${generated}　分享给朋友一起玩吧 🎲`;
       }
       document.getElementById('playerName').focus();
+
+      // 从 cookie 读取上次使用的名字
+      const savedName = getCookie('playerName');
+      if (savedName) document.getElementById('playerName').value = savedName;
     })();
 
     // 自动聚焦
@@ -175,6 +179,18 @@
     document.getElementById('playerName').addEventListener('keydown', e => {
       if (e.key === 'Enter') joinRoom();
     });
+
+    function getCookie(name) {
+      return document.cookie.split(';').map(c => c.trim()).reduce((acc, c) => {
+        const [k, v] = c.split('=');
+        return k === name ? decodeURIComponent(v || '') : acc;
+      }, '');
+    }
+
+    function setCookie(name, value, days) {
+      const exp = new Date(Date.now() + days * 864e5).toUTCString();
+      document.cookie = `${name}=${encodeURIComponent(value)};expires=${exp};path=/`;
+    }
 
     function showError(elId, msg) {
       const el = document.getElementById(elId);
@@ -191,6 +207,9 @@
 
       document.getElementById('joinBtn').disabled = true;
       document.getElementById('joinBtn').textContent = '连接中...';
+
+      // 保存名字到 cookie（30天）
+      setCookie('playerName', playerName, 30);
 
       const selectedEmoji = document.querySelector('.emoji-option.selected')?.dataset.emoji || '🐱';
       socket.emit('join-room', { roomId, playerName, maxPlayers: 4, scriptId: document.getElementById('scriptId').value, emoji: selectedEmoji });

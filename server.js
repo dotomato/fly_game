@@ -251,9 +251,11 @@ io.on('connection', (socket) => {
     if (room.status !== 'waiting') return;
 
     room.status = 'playing';
-    room.currentTurnIndex = 0;
+    // 第一个掷骰子的是房主
+    room.currentTurnIndex = room.players.findIndex(p => p.socketId === room.hostId);
+    if (room.currentTurnIndex === -1) room.currentTurnIndex = 0;
     room.log.push('游戏开始！');
-    const firstPlayer = room.players[0];
+    const firstPlayer = room.players[room.currentTurnIndex];
     room.log.push(`轮到 ${firstPlayer.emoji} ${firstPlayer.name} 掷骰子`);
 
     io.to(roomId).emit('game-started', getRoomPublicState(room));
@@ -277,12 +279,13 @@ io.on('connection', (socket) => {
       p.isFinished = false;
       p.finishOrder = null;
     });
-    room.currentTurnIndex = 0;
+    room.currentTurnIndex = room.players.findIndex(p => p.socketId === room.hostId);
+    if (room.currentTurnIndex === -1) room.currentTurnIndex = 0;
     room.waitingConfirm = false;
     room.status = 'playing';
     room.log = ['游戏重置，再来一局！'];
     room.chatMessages = [];
-    const firstPlayer = room.players[0];
+    const firstPlayer = room.players[room.currentTurnIndex];
     room.log.push(`轮到 ${firstPlayer.emoji} ${firstPlayer.name} 掷骰子`);
 
     console.log(`[游戏重置] 房间 ${roomId}`);

@@ -240,6 +240,7 @@ io.on('connection', (socket) => {
           room.log.push(`${existingByName.emoji} ${existingByName.name} 重新连接了`);
           console.log(`[重连] ${existingByName.emoji}${existingByName.name}  房间=${roomId}  旧socketId=${oldSocketId}  新socketId=${socket.id}`);
           existingByName.socketId = socket.id;
+          if (room.hostId === oldSocketId) room.hostId = socket.id;
           socket.join(roomId);
           socket.emit('joined', { roomId, playerIndex: room.players.indexOf(existingByName) });
           io.to(roomId).emit('room-update', getRoomPublicState(room));
@@ -247,6 +248,7 @@ io.on('connection', (socket) => {
         }
         // 没有挂起的断线计时器：同名玩家已在房间中且连接正常，等待中允许顶替（刷新场景），游戏中拒绝
         if (room.status === 'waiting') {
+          if (room.hostId === existingByName.socketId) room.hostId = socket.id;
           existingByName.socketId = socket.id;
           socket.join(roomId);
           socket.emit('joined', { roomId, playerIndex: room.players.indexOf(existingByName) });

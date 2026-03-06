@@ -7,6 +7,7 @@ const params = new URLSearchParams(window.location.search);
 const ROOM_ID = params.get('roomId') || '';
 const MY_NAME = params.get('name') || '玩家';
 const MY_IDX = parseInt(params.get('idx') || '0');
+const SCRIPT_ID = params.get('script') || 'couples';
 
 // ===== Socket.io 连接 =====
 const socket = io();
@@ -30,7 +31,7 @@ const DICE_FACES = ['', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '
 // ===== 棋盘初始化 =====
 async function initBoard() {
   try {
-    const res = await fetch('api/tasks');
+    const res = await fetch(`api/tasks?script=${encodeURIComponent(SCRIPT_ID)}`);
     tasksData = await res.json();
   } catch (e) {
     console.warn('任务数据加载失败', e);
@@ -38,11 +39,11 @@ async function initBoard() {
 
   const track = document.getElementById('boardTrack');
 
-  for (let i = 1; i <= 80; i++) {
+  for (let i = 1; i <= 40; i++) {
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.id = `cell-${i}`;
-    if (i >= 75) cell.classList.add('end-cell');
+    if (i >= 36) cell.classList.add('end-cell');
 
     const task = tasksData[i - 1];
     const titleText = task ? task.title : '';
@@ -60,7 +61,7 @@ async function initBoard() {
 
 // ===== 渲染棋盘上的棋子 =====
 function renderBoardPlayers(players) {
-  for (let i = 0; i <= 80; i++) {
+  for (let i = 0; i <= 40; i++) {
     const el = document.getElementById(`players-${i}`);
     if (el) el.innerHTML = '';
   }

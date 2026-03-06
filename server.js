@@ -12,15 +12,28 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// 加载任务数据
-const tasksData = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/tasks.json'), 'utf-8'));
+// 加载剧本数据
+const SCRIPTS_DIR = path.join(__dirname, 'data/scripts');
+const scriptsIndex = JSON.parse(fs.readFileSync(path.join(SCRIPTS_DIR, 'index.json'), 'utf-8'));
+const scriptsMap = new Map();
+scriptsIndex.forEach(s => {
+  scriptsMap.set(s.id, JSON.parse(fs.readFileSync(path.join(SCRIPTS_DIR, s.id + '.json'), 'utf-8')));
+});
+// 兼容旧 /api/tasks 接口（默认情侣版）
+const tasksData = scriptsMap.get('couples');
 
 // 静态文件托管
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 任务数据接口
+// 剧本列表接口
+app.get('/api/scripts', (req, res) => {
+  res.json(scriptsIndex);
+});
+
+// 任务数据接口（支持 ?script= 参数）
 app.get('/api/tasks', (req, res) => {
-  res.json(tasksData);
+  const scriptId = req.query.script || 'couples';
+  res.json(scriptsMap.get(scriptId) || tasksData);
 });
 
 // 房间存储: Map<roomId, RoomState>
@@ -53,6 +66,7 @@ function getRoomPublicState(room) {
     id: room.id,
     hostId: room.hostId,
     maxPlayers: room.maxPlayers,
+    scriptId: room.scriptId || 'couples',
     players: room.players.map(p => ({
       socketId: p.socketId,
       name: p.name,
@@ -85,10 +99,11 @@ io.on('connection', (socket) => {
   console.log(`[连接] ${socket.id}`);
 
   // 加入房间
-  socket.on('join-room', ({ roomId, playerName, maxPlayers }) => {
+  socket.on('join-room', ({ roomId, playerName, maxPlayers, scriptId }) => {
     roomId = String(roomId).trim();
     playerName = String(playerName).trim().slice(0, 12) || '匿名玩家';
     maxPlayers = Math.min(Math.max(parseInt(maxPlayers) || 4, 2), 4); // 仅在创建新房间时生效
+    const validScriptId = (scriptId && scriptsMap.has(scriptId)) ? scriptId : 'couples';
 
     let room = rooms.get(roomId);
 
@@ -98,6 +113,7 @@ io.on('connection', (socket) => {
         id: roomId,
         hostId: socket.id,
         maxPlayers,
+        scriptId: validScriptId,
         players: [],
         currentTurnIndex: 0,
         status: 'waiting',
@@ -263,12 +279,13 @@ io.on('connection', (socket) => {
     // 计算新位置
     const oldPosition = currentPlayer.position;
     let newPosition = oldPosition + diceValue;
-    if (newPosition > 80) newPosition = 80;
+    if (newPosition > 40) newPosition = 40;
 
     currentPlayer.position = newPosition;
 
     // 获取格子任务（0格为起点，无任务）
-    const task = newPosition > 0 ? tasksData[newPosition - 1] : null;
+    const scriptTasks = scriptsMap.get(room.scriptId) || tasksData;
+    const task = newPosition > 0 ? scriptTasks[newPosition - 1] : null;
 
     // 判断是否结束
     let justFinished = false;

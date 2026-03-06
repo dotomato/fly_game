@@ -212,7 +212,7 @@
       setCookie('playerName', playerName, 30);
 
       const selectedEmoji = document.querySelector('.emoji-option.selected')?.dataset.emoji || '🐱';
-      socket.emit('join-room', { roomId, playerName, maxPlayers: 4, scriptId: document.getElementById('scriptId').value, emoji: selectedEmoji });
+      socket.emit('join-room', { roomId, playerName, maxPlayers: 4, scriptId: document.getElementById('scriptId').value, emoji: selectedEmoji, joinOnly: isJoining });
     }
 
     function startGame() {

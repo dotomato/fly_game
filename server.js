@@ -152,7 +152,7 @@ io.on('connection', (socket) => {
   console.log(`[连接] ${socket.id}`);
 
   // 加入房间
-  socket.on('join-room', ({ roomId, playerName, maxPlayers, scriptId, emoji }) => {
+  socket.on('join-room', ({ roomId, playerName, maxPlayers, scriptId, emoji, joinOnly }) => {
     roomId = String(roomId).trim();
     playerName = String(playerName).trim().slice(0, 12) || '匿名玩家';
     maxPlayers = Math.min(Math.max(parseInt(maxPlayers) || 4, 2), 4); // 仅在创建新房间时生效
@@ -161,6 +161,11 @@ io.on('connection', (socket) => {
     let room = rooms.get(roomId);
 
     if (!room) {
+      // 通过分享链接加入时，房间不存在则报错
+      if (joinOnly) {
+        socket.emit('error', { message: '房间不存在或已解散，请让朋友重新分享链接' });
+        return;
+      }
       // 创建新房间
       room = {
         id: roomId,

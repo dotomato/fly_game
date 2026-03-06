@@ -89,9 +89,7 @@
           <label for="scriptId">选择剧本</label>
           <div class="select-wrapper">
             <select id="scriptId">
-              <option value="couples">情侣版 💕</option>
-              <option value="friends">朋友版 🎉</option>
-              <option value="family">家庭版 🏠</option>
+              <option value="">加载中...</option>
             </select>
           </div>
           <p class="max-note">注：加入已有房间时，剧本以房主创建时选择的为准</p>
@@ -139,6 +137,26 @@
     let myPlayerIndex = null;
     let isHost = false;
     let currentRoomState = null;
+    let scriptsIndex = []; // 从服务端加载的剧本列表
+
+    // 动态加载剧本选项
+    (async () => {
+      try {
+        const res = await fetch('/api/scripts');
+        scriptsIndex = await res.json();
+        const sel = document.getElementById('scriptId');
+        sel.innerHTML = '';
+        scriptsIndex.forEach((s, i) => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = `${s.name}（${s.taskCount} 格）`;
+          if (i === 0) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        console.warn('剧本列表加载失败', e);
+      }
+    })();
 
     // 自动聚焦
     document.getElementById('playerName').focus();
@@ -228,9 +246,11 @@
       document.getElementById('roomCountDisplay').textContent = `${state.players.length}/${state.maxPlayers} 人`;
 
       // 显示当前剧本
-      const scriptNames = { couples: '情侣版 💕', friends: '朋友版 🎉', family: '家庭版 🏠' };
       const scriptNameEl = document.getElementById('scriptNameDisplay');
-      if (scriptNameEl) scriptNameEl.textContent = scriptNames[state.scriptId] || state.scriptId || '—';
+      if (scriptNameEl) {
+        const found = scriptsIndex.find(s => s.id === state.scriptId);
+        scriptNameEl.textContent = found ? found.name : (state.scriptId || '—');
+      }
 
       const startBtn = document.getElementById('startBtn');
       if (isHost) {

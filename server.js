@@ -12,15 +12,40 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// 加载剧本数据
+// 动态加载所有剧本（扫描 data/scripts/*.json，每个文件含 id/name/desc/tasks）
 const SCRIPTS_DIR = path.join(__dirname, 'data/scripts');
-const scriptsIndex = JSON.parse(fs.readFileSync(path.join(SCRIPTS_DIR, 'index.json'), 'utf-8'));
-const scriptsMap = new Map();
-scriptsIndex.forEach(s => {
-  scriptsMap.set(s.id, JSON.parse(fs.readFileSync(path.join(SCRIPTS_DIR, s.id + '.json'), 'utf-8')));
-});
-// 兼容旧 /api/tasks 接口（默认情侣版）
-const tasksData = scriptsMap.get('couples');
+const scriptsMap = new Map();   // id -> { id, name, desc, tasks }
+const scriptsIndex = [];        // [{ id, name, desc, taskCount }] 供前端展示
+
+fs.readdirSync(SCRIPTS_DIR)
+  .filter(f => f.endsWith('.json'))
+  .sort()
+  .forEach(file => {
+    try {
+      const raw = JSON.parse(fs.readFileSync(path.join(SCRIPTS_DIR, file), 'utf-8'));
+      if (!raw.id || !Array.isArray(raw.tasks)) {
+        console.warn(`[剧本跳过] ${file}：缺少 id 或 tasks 字段`);
+        return;
+      }
+      scriptsMap.set(raw.id, raw);
+      scriptsIndex.push({ id: raw.id, name: raw.name || raw.id, desc: raw.desc || '', taskCount: raw.tasks.length });
+      console.log(`[剧本加载] ${raw.id} (${raw.name}) - ${raw.tasks.length} 个任务`);
+    } catch (e) {
+      console.error(`[剧本加载失败] ${file}:`, e.message);
+    }
+  });
+
+if (scriptsMap.size === 0) {
+  console.error('[错误] 未找到任何剧本，请检查 data/scripts/ 目录');
+  process.exit(1);
+}
+
+// 默认剧本：优先取 couples，否则取第一个
+const DEFAULT_SCRIPT_ID = scriptsMap.has('couples') ? 'couples' : scriptsIndex[0].id;
+console.log(`[默认剧本] ${DEFAULT_SCRIPT_ID}`);
+
+// 兼容旧 /api/tasks 接口（默认剧本任务列表）
+const tasksData = scriptsMap.get(DEFAULT_SCRIPT_ID).tasks;
 
 // 静态文件托管
 app.use(express.static(path.join(__dirname, 'public')));
@@ -30,10 +55,11 @@ app.get('/api/scripts', (req, res) => {
   res.json(scriptsIndex);
 });
 
-// 任务数据接口（支持 ?script= 参数）
+// 任务数据接口（支持 ?script= 参数，返回 tasks 数组）
 app.get('/api/tasks', (req, res) => {
-  const scriptId = req.query.script || 'couples';
-  res.json(scriptsMap.get(scriptId) || tasksData);
+  const scriptId = req.query.script || DEFAULT_SCRIPT_ID;
+  const script = scriptsMap.get(scriptId);
+  res.json(script ? script.tasks : tasksData);
 });
 
 // 房间存储: Map<roomId, RoomState>
@@ -103,7 +129,7 @@ io.on('connection', (socket) => {
     roomId = String(roomId).trim();
     playerName = String(playerName).trim().slice(0, 12) || '匿名玩家';
     maxPlayers = Math.min(Math.max(parseInt(maxPlayers) || 4, 2), 4); // 仅在创建新房间时生效
-    const validScriptId = (scriptId && scriptsMap.has(scriptId)) ? scriptId : 'couples';
+    const validScriptId = (scriptId && scriptsMap.has(scriptId)) ? scriptId : DEFAULT_SCRIPT_ID;
 
     let room = rooms.get(roomId);
 
@@ -276,15 +302,15 @@ io.on('connection', (socket) => {
     // 生成骰子点数 1-6
     const diceValue = Math.floor(Math.random() * 6) + 1;
 
-    // 计算新位置
+    // 计算新位置（上限由剧本实际任务数决定）
     const oldPosition = currentPlayer.position;
     let newPosition = oldPosition + diceValue;
-    if (newPosition > 40) newPosition = 40;
 
+    // 获取格子任务（0格为起点，无任务），上限由剧本实际任务数决定
+    const scriptTasks = (scriptsMap.get(room.scriptId) || scriptsMap.get(DEFAULT_SCRIPT_ID)).tasks;
+    const maxPosition = scriptTasks.length;
+    if (newPosition > maxPosition) newPosition = maxPosition;
     currentPlayer.position = newPosition;
-
-    // 获取格子任务（0格为起点，无任务）
-    const scriptTasks = scriptsMap.get(room.scriptId) || tasksData;
     const task = newPosition > 0 ? scriptTasks[newPosition - 1] : null;
 
     // 判断是否结束

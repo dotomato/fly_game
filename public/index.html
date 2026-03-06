@@ -22,11 +22,11 @@
           <label for="playerName">你的名字</label>
           <input type="text" id="playerName" placeholder="输入你的名字" maxlength="12" autocomplete="off" />
         </div>
-        <div class="form-group">
+        <div class="form-group" id="roomIdGroup">
           <label for="roomId">房间 ID</label>
           <input type="text" id="roomId" placeholder="输入自定义房间ID（与伴侣保持一致）" maxlength="20" autocomplete="off" />
         </div>
-        <div class="form-group">
+        <div class="form-group" id="maxPlayersGroup">
           <label for="maxPlayers">最多玩家数</label>
           <div class="select-wrapper">
             <select id="maxPlayers">
@@ -37,7 +37,7 @@
           </div>
           <p class="max-note">注：房间创建后此设置不可更改</p>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="scriptIdGroup">
           <label for="scriptId">选择剧本</label>
           <div class="select-wrapper">
             <select id="scriptId">
@@ -167,6 +167,10 @@
       const room = p.get('room');
       if (room) {
         document.getElementById('roomId').value = room;
+        // 隐藏房间号、人数、剧本选择（加入已有房间时无需设置）
+        document.getElementById('roomIdGroup').style.display = 'none';
+        document.getElementById('maxPlayersGroup').style.display = 'none';
+        document.getElementById('scriptIdGroup').style.display = 'none';
         // 清理 URL，避免刷新时重复触发
         history.replaceState(null, '', location.pathname);
         document.getElementById('playerName').focus();

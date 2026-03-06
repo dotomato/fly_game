@@ -142,7 +142,7 @@
     // 动态加载剧本选项
     (async () => {
       try {
-        const res = await fetch('/api/scripts');
+        const res = await fetch('api/scripts');
         scriptsIndex = await res.json();
         const sel = document.getElementById('scriptId');
         sel.innerHTML = '';

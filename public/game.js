@@ -40,11 +40,11 @@ async function initBoard() {
 
   const track = document.getElementById('boardTrack');
 
-  for (let i = 1; i <= 40; i++) {
+  for (let i = 1; i <= tasksData.length; i++) {
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.id = `cell-${i}`;
-    if (i >= 36) cell.classList.add('end-cell');
+    if (i >= tasksData.length - 4) cell.classList.add('end-cell');
 
     const task = tasksData[i - 1];
     const titleText = task ? task.title : '';
@@ -62,7 +62,8 @@ async function initBoard() {
 
 // ===== 渲染棋盘上的棋子 =====
 function renderBoardPlayers(players) {
-  for (let i = 0; i <= 40; i++) {
+  const totalCells = document.querySelectorAll('.cell').length;
+  for (let i = 0; i <= totalCells; i++) {
     const el = document.getElementById(`players-${i}`);
     if (el) el.innerHTML = '';
   }
@@ -126,7 +127,7 @@ function renderSidePlayerList(players, currentTurnIndex) {
     li.innerHTML = `
       <span class="p-emoji">${p.emoji}</span>
       <div class="p-info">
-        <div class="p-name">${escapeHtml(p.name)}${p.socketId === mySocketId ? ' <span style="font-size:11px;color:var(--gray-400);font-weight:400">(我)</span>' : ''}</div>
+        <div class="p-name">${escapeHtml(p.name)}${p.socketId === mySocketId ? ' <span class="me-tag">(我)</span>' : ''}</div>
         <div class="p-pos">位置：${p.position === 0 ? '起点' : `第 ${p.position} 格`}</div>
       </div>
       <span class="p-status ${statusClass}">${statusText}</span>
@@ -591,10 +592,6 @@ socket.on('connect', () => {
       maxPlayers: 0
     });
   }
-});
-
-socket.on('joined', () => {
-  // 等待 room-update 或 game-started
 });
 
 socket.on('room-update', (state) => {

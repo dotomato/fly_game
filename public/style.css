@@ -966,9 +966,6 @@ body {
   min-height: 0;
 }
 
-.chat-messages::-webkit-scrollbar { width: 4px; }
-.chat-messages::-webkit-scrollbar-track { background: transparent; }
-.chat-messages::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 2px; }
 
 .chat-msg {
   display: flex;
@@ -1249,4 +1246,81 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--gray-400);
+}
+
+/* ========== 大厅（index.html）专用 ========== */
+.emoji-preview {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.emoji-badge {
+  font-size: 22px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.max-note {
+  font-size: 13px;
+  color: var(--gray-400);
+  margin-top: 6px;
+}
+
+.select-wrapper {
+  position: relative;
+}
+
+.select-wrapper select {
+  padding-right: 32px;
+}
+
+.select-wrapper::after {
+  content: '▾';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-400);
+  pointer-events: none;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--gray-100);
+  margin: 24px 0;
+}
+
+.join-form {
+  display: none;
+}
+
+.join-form.active {
+  display: block;
+}
+
+/* 等待室：人数显示 */
+.room-count {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+/* 等待室：剧本信息行 */
+.room-info-script {
+  margin-top: 8px;
+  background: var(--gray-50);
+  border: 1.5px solid var(--gray-200);
+}
+
+/* (我) 小标签，用于玩家列表中标记自己 */
+.me-tag {
+  font-size: 11px;
+  color: var(--gray-400);
+  font-weight: 400;
 }

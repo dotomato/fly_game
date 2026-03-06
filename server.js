@@ -44,9 +44,6 @@ if (scriptsMap.size === 0) {
 const DEFAULT_SCRIPT_ID = scriptsMap.has('couples') ? 'couples' : scriptsIndex[0].id;
 console.log(`[默认剧本] ${DEFAULT_SCRIPT_ID}`);
 
-// 兼容旧 /api/tasks 接口（默认剧本任务列表）
-const tasksData = scriptsMap.get(DEFAULT_SCRIPT_ID).tasks;
-
 // 静态文件托管（HTML 文件禁用缓存，其他资源正常缓存）
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders(res, filePath) {
@@ -64,8 +61,8 @@ app.get('/api/scripts', (req, res) => {
 // 任务数据接口（支持 ?script= 参数，返回 tasks 数组）
 app.get('/api/tasks', (req, res) => {
   const scriptId = req.query.script || DEFAULT_SCRIPT_ID;
-  const script = scriptsMap.get(scriptId);
-  res.json(script ? script.tasks : tasksData);
+  const script = scriptsMap.get(scriptId) || scriptsMap.get(DEFAULT_SCRIPT_ID);
+  res.json(script.tasks);
 });
 
 // 房间存储: Map<roomId, RoomState>
@@ -87,7 +84,6 @@ const EMOJIS = ['❤️', '💙', '💚', '💛'];
  *   players: [{ socketId, name, emoji, position, isFinished, finishOrder }],
  *   currentTurnIndex: number,
  *   status: 'waiting' | 'playing' | 'finished',
- *   finishCount: number,
  *   waitingConfirm: boolean,
  *   log: string[],
  *   chatMessages: [{ playerEmoji, playerName, message, timestamp }]
@@ -123,10 +119,32 @@ function nextTurn(room) {
     tries++;
   } while (room.players[room.currentTurnIndex].isFinished && tries < total);
 
-  // 如果所有人都结束了
   if (tries >= total && room.players.every(p => p.isFinished)) {
     room.status = 'finished';
   }
+}
+
+// 结束游戏：设置状态、广播排名
+function finishGame(room, roomId) {
+  room.status = 'finished';
+  room.waitingConfirm = false;
+  room.log.push('🎊 所有玩家完成旅程！游戏结束！');
+  const rankings = room.players
+    .filter(p => p.isFinished)
+    .sort((a, b) => a.finishOrder - b.finishOrder)
+    .map(p => ({ name: p.name, emoji: p.emoji, order: p.finishOrder }));
+  io.to(roomId).emit('game-over', { rankings, roomState: getRoomPublicState(room) });
+  console.log(`[游戏结束] 房间 ${roomId}`);
+}
+
+// 清理房间内所有玩家的断线计时器
+function clearRoomTimers(room) {
+  room.players.forEach(p => {
+    if (disconnectTimers.has(p.socketId)) {
+      clearTimeout(disconnectTimers.get(p.socketId));
+      disconnectTimers.delete(p.socketId);
+    }
+  });
 }
 
 io.on('connection', (socket) => {
@@ -151,7 +169,6 @@ io.on('connection', (socket) => {
         players: [],
         currentTurnIndex: 0,
         status: 'waiting',
-        finishCount: 0,
         log: [],
         chatMessages: []
       };
@@ -195,11 +212,10 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const emojiIndex = room.players.length;
     const player = {
       socketId: socket.id,
       name: playerName,
-      emoji: EMOJIS[emojiIndex],
+      emoji: EMOJIS[room.players.length],
       position: 0,
       isFinished: false,
       finishOrder: null
@@ -207,8 +223,7 @@ io.on('connection', (socket) => {
     room.players.push(player);
     socket.join(roomId);
 
-    const playerIndex = room.players.length - 1;
-    socket.emit('joined', { roomId, playerIndex });
+    socket.emit('joined', { roomId, playerIndex: room.players.length - 1 });
     room.log.push(`${player.emoji} ${player.name} 加入了房间`);
     io.to(roomId).emit('room-update', getRoomPublicState(room));
     console.log(`[加入房间] ${playerName} -> ${roomId}`);
@@ -247,13 +262,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // 取消所有断线计时器
-    room.players.forEach(p => {
-      if (disconnectTimers.has(p.socketId)) {
-        clearTimeout(disconnectTimers.get(p.socketId));
-        disconnectTimers.delete(p.socketId);
-      }
-    });
+    clearRoomTimers(room);
 
     // 重置所有玩家状态
     room.players.forEach(p => {
@@ -262,7 +271,6 @@ io.on('connection', (socket) => {
       p.finishOrder = null;
     });
     room.currentTurnIndex = 0;
-    room.finishCount = 0;
     room.waitingConfirm = false;
     room.status = 'playing';
     room.log = ['游戏重置，再来一局！'];
@@ -283,14 +291,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // 取消所有断线计时器
-    room.players.forEach(p => {
-      if (disconnectTimers.has(p.socketId)) {
-        clearTimeout(disconnectTimers.get(p.socketId));
-        disconnectTimers.delete(p.socketId);
-      }
-    });
-
+    clearRoomTimers(room);
     console.log(`[销毁房间] ${roomId}`);
     io.to(roomId).emit('room-destroyed', { message: '房主已解散房间' });
     rooms.delete(roomId);
@@ -313,21 +314,17 @@ io.on('connection', (socket) => {
 
     // 计算新位置（上限由剧本实际任务数决定）
     const oldPosition = currentPlayer.position;
-    let newPosition = oldPosition + diceValue;
-
-    // 获取格子任务（0格为起点，无任务），上限由剧本实际任务数决定
-    const scriptTasks = (scriptsMap.get(room.scriptId) || scriptsMap.get(DEFAULT_SCRIPT_ID)).tasks;
+    const scriptTasks = scriptsMap.get(room.scriptId).tasks;
     const maxPosition = scriptTasks.length;
-    if (newPosition > maxPosition) newPosition = maxPosition;
+    let newPosition = Math.min(oldPosition + diceValue, maxPosition);
     currentPlayer.position = newPosition;
-    const task = newPosition > 0 ? scriptTasks[newPosition - 1] : null;
+    const task = scriptTasks[newPosition - 1] || null;
 
     // 判断是否结束
     let justFinished = false;
     if (task && task.hasEnd) {
+      currentPlayer.finishOrder = room.players.filter(p => p.isFinished).length + 1;
       currentPlayer.isFinished = true;
-      room.finishCount++;
-      currentPlayer.finishOrder = room.finishCount;
       justFinished = true;
       room.log.push(`${currentPlayer.emoji} ${currentPlayer.name} 掷出 ${diceValue}，到达第 ${newPosition} 格，完成旅程！🎉`);
     } else {
@@ -337,8 +334,7 @@ io.on('connection', (socket) => {
     // 等待当前玩家确认任务完成，暂不切换回合
     room.waitingConfirm = true;
 
-    // 发送骰子结果给所有人
-    const diceResult = {
+    io.to(roomId).emit('dice-result', {
       playerId: socket.id,
       playerName: currentPlayer.name,
       playerEmoji: currentPlayer.emoji,
@@ -347,28 +343,13 @@ io.on('connection', (socket) => {
       oldPosition,
       newPosition,
       task: task ? { id: task.id, title: task.title, content: task.content, hasEnd: task.hasEnd } : null,
-      justFinished
-    };
-
-    // 检查是否全部结束
-    const allFinished = room.players.every(p => p.isFinished);
-
-    io.to(roomId).emit('dice-result', {
-      ...diceResult,
+      justFinished,
       roomState: getRoomPublicState(room)
     });
 
-    if (allFinished) {
-      // 全部结束时不等确认，直接结束游戏
-      room.status = 'finished';
-      room.waitingConfirm = false;
-      room.log.push('🎊 所有玩家完成旅程！游戏结束！');
-      const rankings = room.players
-        .filter(p => p.isFinished)
-        .sort((a, b) => a.finishOrder - b.finishOrder)
-        .map(p => ({ name: p.name, emoji: p.emoji, order: p.finishOrder }));
-      io.to(roomId).emit('game-over', { rankings, roomState: getRoomPublicState(room) });
-      console.log(`[游戏结束] 房间 ${roomId}`);
+    // 全部结束时不等确认，直接结束游戏
+    if (room.players.every(p => p.isFinished)) {
+      finishGame(room, roomId);
     }
   });
 
@@ -385,25 +366,12 @@ io.on('connection', (socket) => {
     }
 
     room.waitingConfirm = false;
-
-    const allFinished = room.players.every(p => p.isFinished);
-    if (allFinished) {
-      room.status = 'finished';
-      room.log.push('🎊 所有玩家完成旅程！游戏结束！');
-      const rankings = room.players
-        .filter(p => p.isFinished)
-        .sort((a, b) => a.finishOrder - b.finishOrder)
-        .map(p => ({ name: p.name, emoji: p.emoji, order: p.finishOrder }));
-      io.to(roomId).emit('game-over', { rankings, roomState: getRoomPublicState(room) });
-      console.log(`[游戏结束] 房间 ${roomId}`);
-    } else {
-      nextTurn(room);
-      if (room.status !== 'finished') {
-        const nextPlayer = room.players[room.currentTurnIndex];
-        room.log.push(`轮到 ${nextPlayer.emoji} ${nextPlayer.name} 掷骰子`);
-      }
-      io.to(roomId).emit('room-update', getRoomPublicState(room));
+    nextTurn(room);
+    if (room.status !== 'finished') {
+      const nextPlayer = room.players[room.currentTurnIndex];
+      room.log.push(`轮到 ${nextPlayer.emoji} ${nextPlayer.name} 掷骰子`);
     }
+    io.to(roomId).emit('room-update', getRoomPublicState(room));
   });
 
   // 聊天消息
@@ -475,33 +443,25 @@ io.on('connection', (socket) => {
         const timer = setTimeout(() => {
           disconnectTimers.delete(socket.id);
           // 宽限期结束，检查玩家是否已用新 socket 重连（socketId 已变）
-          if (player.socketId !== socket.id) {
-            // 已重连，不做处理
-            return;
-          }
-          // 确认断线，标记为已完成
+          if (player.socketId !== socket.id) return;
+
           console.log(`[超时断线] ${player.name}`);
           const idx = room.players.findIndex(p => p.socketId === socket.id);
           if (idx === -1 || room.status !== 'playing') return;
 
+          player.finishOrder = room.players.filter(p => p.isFinished).length + 1;
           player.isFinished = true;
-          room.finishCount++;
-          player.finishOrder = room.finishCount;
           room.log[room.log.length - 1] = `${player.emoji} ${player.name} 断线，已退出游戏`;
 
-          const allFinished = room.players.every(p => p.isFinished);
-          if (allFinished) {
-            room.status = 'finished';
-            io.to(roomId).emit('game-over', {
-              rankings: room.players
-                .filter(p => p.isFinished)
-                .sort((a, b) => a.finishOrder - b.finishOrder)
-                .map(p => ({ name: p.name, emoji: p.emoji, order: p.finishOrder })),
-              roomState: getRoomPublicState(room)
-            });
+          if (room.players.every(p => p.isFinished)) {
+            finishGame(room, roomId);
           } else {
             if (room.currentTurnIndex === idx) nextTurn(room);
-            io.to(roomId).emit('room-update', getRoomPublicState(room));
+            if (room.status === 'finished') {
+              finishGame(room, roomId);
+            } else {
+              io.to(roomId).emit('room-update', getRoomPublicState(room));
+            }
           }
         }, REJOIN_GRACE_MS);
 

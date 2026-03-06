@@ -47,8 +47,14 @@ console.log(`[默认剧本] ${DEFAULT_SCRIPT_ID}`);
 // 兼容旧 /api/tasks 接口（默认剧本任务列表）
 const tasksData = scriptsMap.get(DEFAULT_SCRIPT_ID).tasks;
 
-// 静态文件托管
-app.use(express.static(path.join(__dirname, 'public')));
+// 静态文件托管（HTML 文件禁用缓存，其他资源正常缓存）
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+}));
 
 // 剧本列表接口
 app.get('/api/scripts', (req, res) => {

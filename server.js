@@ -342,7 +342,7 @@ io.on('connection', (socket) => {
       diceValue,
       oldPosition,
       newPosition,
-      task: task ? { id: task.id, title: task.title, content: task.content, hasEnd: task.hasEnd } : null,
+      task: task ? { id: task.id, title: task.title, content: task.content } : null,
       justFinished,
       roomState: getRoomPublicState(room)
     });

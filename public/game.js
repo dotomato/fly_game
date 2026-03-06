@@ -293,24 +293,16 @@ function rollDice() {
 
 // ===== 任务详情（标题栏下方）=====
 function showTaskPanel(data) {
-  const { playerEmoji, playerName, diceValue, newPosition, task, justFinished } = data;
+  const { playerEmoji, playerName, diceValue, newPosition, task } = data;
 
   const bar = document.getElementById('taskBar');
   document.getElementById('taskBarCell').textContent = `第 ${newPosition} 格`;
   document.getElementById('taskBarPlayer').innerHTML =
     `${playerEmoji} <strong>${escapeHtml(playerName)}</strong> 掷出 ${DICE_FACES[diceValue]}`;
   document.getElementById('taskBarContent').textContent = task ? task.content : '（无任务）';
-
-  if (justFinished) {
-    bar.classList.add('task-bar-end');
-  } else {
-    bar.classList.remove('task-bar-end');
-  }
 }
 
 function clearTaskPanel() {
-  const bar = document.getElementById('taskBar');
-  bar.classList.remove('task-bar-end');
   document.getElementById('taskBarCell').textContent = '';
   document.getElementById('taskBarPlayer').textContent = '';
   document.getElementById('taskBarContent').textContent = '落子后，任务将显示在这里 ✨';

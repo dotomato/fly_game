@@ -160,20 +160,10 @@
         document.getElementById('joinBtn').textContent = '加入房间';
         history.replaceState(null, '', location.pathname);
       } else {
-        // 检查 cookie 里有没有上次的房间ID（断线重连场景）
-        const lastRoomId = getCookie('lastRoomId');
-        if (lastRoomId) {
-          isJoining = true;
-          document.getElementById('roomId').value = lastRoomId;
-          document.getElementById('scriptIdGroup').style.display = 'none';
-          document.getElementById('lobbySubtitle').textContent = `正在重新连接房间 ${lastRoomId}...`;
-          document.getElementById('joinBtn').textContent = '重新加入';
-        } else {
-          // 自动生成房间ID
-          const generated = Math.random().toString(36).slice(2, 8).toUpperCase();
-          document.getElementById('roomId').value = generated;
-          document.getElementById('lobbySubtitle').textContent = `房间号：${generated}　分享给朋友一起玩吧 🎲`;
-        }
+        // 自动生成房间ID
+        const generated = Math.random().toString(36).slice(2, 8).toUpperCase();
+        document.getElementById('roomId').value = generated;
+        document.getElementById('lobbySubtitle').textContent = `房间号：${generated}　分享给朋友一起玩吧 🎲`;
       }
       document.getElementById('playerName').focus();
 
@@ -215,6 +205,9 @@
 
       if (!playerName) { showError('joinError', '请输入你的名字'); return; }
 
+      // 主动加入时清除旧的 lastRoomId，避免下次误触发重连
+      setCookie('lastRoomId', '', -1);
+
       document.getElementById('joinBtn').disabled = true;
       document.getElementById('joinBtn').textContent = '连接中...';
 
@@ -253,17 +246,6 @@
         }
       }
     }
-
-    // 断线自动重连
-    socket.on('connect', () => {
-      const lastRoomId = getCookie('lastRoomId');
-      const savedName = getCookie('playerName');
-      if (lastRoomId && savedName && !myRoomId) {
-        // 已有上次的房间ID和名字，且当前不在等待室 → 自动重发 join-room
-        const selectedEmoji = document.querySelector('.emoji-option.selected')?.dataset.emoji || '🐱';
-        socket.emit('join-room', { roomId: lastRoomId, playerName: savedName, maxPlayers: 4, joinOnly: true, emoji: selectedEmoji });
-      }
-    });
 
     // 服务器响应：成功加入
     socket.on('joined', ({ roomId, playerIndex }) => {

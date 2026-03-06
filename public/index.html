@@ -160,10 +160,20 @@
         document.getElementById('joinBtn').textContent = '加入房间';
         history.replaceState(null, '', location.pathname);
       } else {
-        // 自动生成房间ID
-        const generated = Math.random().toString(36).slice(2, 8).toUpperCase();
-        document.getElementById('roomId').value = generated;
-        document.getElementById('lobbySubtitle').textContent = `房间号：${generated}　分享给朋友一起玩吧 🎲`;
+        // 检查 cookie 里有没有上次的房间ID（断线重连场景）
+        const lastRoomId = getCookie('lastRoomId');
+        if (lastRoomId) {
+          isJoining = true;
+          document.getElementById('roomId').value = lastRoomId;
+          document.getElementById('scriptIdGroup').style.display = 'none';
+          document.getElementById('lobbySubtitle').textContent = `正在重新连接房间 ${lastRoomId}...`;
+          document.getElementById('joinBtn').textContent = '重新加入';
+        } else {
+          // 自动生成房间ID
+          const generated = Math.random().toString(36).slice(2, 8).toUpperCase();
+          document.getElementById('roomId').value = generated;
+          document.getElementById('lobbySubtitle').textContent = `房间号：${generated}　分享给朋友一起玩吧 🎲`;
+        }
       }
       document.getElementById('playerName').focus();
 
@@ -248,6 +258,8 @@
     socket.on('joined', ({ roomId, playerIndex }) => {
       myRoomId = roomId;
       myPlayerIndex = playerIndex;
+      // 保存房间ID到 cookie，断线重连时用
+      setCookie('lastRoomId', roomId, 1);
       document.getElementById('joinForm').classList.remove('active');
       document.getElementById('waitingRoom').classList.add('active');
       document.getElementById('roomIdDisplay').textContent = roomId;
@@ -265,6 +277,8 @@
 
     // 游戏开始，跳转到游戏页
     socket.on('game-started', (state) => {
+      // 游戏开始后清除 lastRoomId cookie，不再需要重连等待室
+      setCookie('lastRoomId', '', -1);
       const playerName = document.getElementById('playerName').value.trim();
       const scriptId = state.scriptId || 'couples';
       const url = `game.html?roomId=${encodeURIComponent(myRoomId)}&name=${encodeURIComponent(playerName)}&idx=${myPlayerIndex}&script=${encodeURIComponent(scriptId)}`;

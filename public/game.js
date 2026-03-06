@@ -615,9 +615,9 @@ socket.on('dice-result', (data) => {
   fab.classList.remove('rolling');
   fab.textContent = DICE_FACES[diceValue] || '🎲';
 
-  // 2秒后恢复骰子图标
+  // 2秒后恢复骰子图标（如果此时不是等待确认状态）
   setTimeout(() => {
-    if (!fab.classList.contains('rolling')) fab.textContent = '🎲';
+    if (!fab.classList.contains('rolling') && !fab.classList.contains('confirm')) fab.textContent = '🎲';
   }, 2000);
 
   isRolling = false;

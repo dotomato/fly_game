@@ -1339,6 +1339,45 @@ body {
   border: 1.5px solid var(--gray-200);
 }
 
+/* 等待室：分享链接行 */
+.share-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.share-link-input {
+  flex: 1;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--gray-600);
+  background: var(--gray-50);
+  outline: none;
+  cursor: text;
+  min-width: 0;
+}
+
+.share-btn {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--primary);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.share-btn:hover {
+  background: var(--primary-dark);
+}
+
 /* (我) 小标签，用于玩家列表中标记自己 */
 .me-tag {
   font-size: 11px;

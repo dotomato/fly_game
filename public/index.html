@@ -108,6 +108,11 @@
           <span>📖 剧本：</span>
           <span id="scriptNameDisplay" style="font-weight:600;color:var(--primary)">—</span>
         </div>
+        <!-- 房间链接分享 -->
+        <div class="share-row" id="shareRow">
+          <input class="share-link-input" id="shareLinkInput" readonly />
+          <button class="share-btn" id="shareBtn" onclick="shareRoom()">🔗 分享</button>
+        </div>
         <div class="form-group">
           <label>等待玩家加入</label>
           <ul class="player-list" id="playerList"></ul>
@@ -156,6 +161,18 @@
       opt.classList.add('selected');
     });
 
+    // 从 URL 参数自动填写房间号
+    (function () {
+      const p = new URLSearchParams(location.search);
+      const room = p.get('room');
+      if (room) {
+        document.getElementById('roomId').value = room;
+        // 清理 URL，避免刷新时重复触发
+        history.replaceState(null, '', location.pathname);
+        document.getElementById('playerName').focus();
+      }
+    })();
+
     // 自动聚焦
     document.getElementById('playerName').focus();
 
@@ -194,6 +211,30 @@
       socket.emit('start-game', { roomId: myRoomId });
     }
 
+    function shareRoom() {
+      const input = document.getElementById('shareLinkInput');
+      const url = input.value;
+      const btn = document.getElementById('shareBtn');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+          btn.textContent = '✅ 已复制';
+          setTimeout(() => { btn.textContent = '🔗 分享'; }, 2000);
+        }).catch(() => {
+          input.select();
+          alert('自动复制失败，请手动复制上方链接');
+        });
+      } else {
+        input.select();
+        const ok = document.execCommand('copy');
+        if (ok) {
+          btn.textContent = '✅ 已复制';
+          setTimeout(() => { btn.textContent = '🔗 分享'; }, 2000);
+        } else {
+          alert('自动复制失败，请手动复制上方链接');
+        }
+      }
+    }
+
     // 服务器响应：成功加入
     socket.on('joined', ({ roomId, playerIndex }) => {
       myRoomId = roomId;
@@ -201,6 +242,9 @@
       document.getElementById('joinForm').classList.remove('active');
       document.getElementById('waitingRoom').classList.add('active');
       document.getElementById('roomIdDisplay').textContent = roomId;
+      // 生成分享链接
+      const shareUrl = `${location.origin}${location.pathname}?room=${encodeURIComponent(roomId)}`;
+      document.getElementById('shareLinkInput').value = shareUrl;
     });
 
     // 房间状态更新

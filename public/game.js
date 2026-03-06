@@ -610,6 +610,15 @@ socket.on('game-started', (state) => {
 socket.on('dice-result', (data) => {
   const { roomState: newState, diceValue, justFinished, task, newPosition, playerEmoji, playerName } = data;
 
+  // 先记录旧位置（用于动画），再更新全局 roomState
+  const movingPlayer = roomState?.players?.find(p => p.emoji === playerEmoji);
+  const oldPosition = movingPlayer ? movingPlayer.position : newPosition;
+
+  // 提前更新全局 roomState 为 dice-result 快照，
+  // 这样动画回调时如果 room-update 还未到达，也能用到正确的位置数据；
+  // 如果 room-update 先到达则 roomState 已是更新的状态
+  roomState = newState;
+
   // 停止骰子动画
   const fab = document.getElementById('rollFab');
   fab.classList.remove('rolling');
@@ -622,13 +631,11 @@ socket.on('dice-result', (data) => {
 
   isRolling = false;
 
-  // 记录移动玩家的旧位置（动画用）
-  const movingPlayer = roomState?.players?.find(p => p.emoji === playerEmoji);
-  const oldPosition = movingPlayer ? movingPlayer.position : newPosition;
-
   // 执行移动动画，动画结束后再更新棋盘
+  // 注意：用 roomState（全局最新）而非 newState（dice-result 快照），
+  // 避免动画期间 room-update 已到达时 waitingConfirm 被旧快照覆盖
   animatePlayerMove(playerEmoji, oldPosition, newPosition, () => {
-    renderAll(newState);
+    renderAll(roomState || newState);
     if (task) {
       showTaskPanel({ playerEmoji, playerName, diceValue, newPosition, task, justFinished });
     }

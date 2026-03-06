@@ -640,11 +640,10 @@ socket.on('dice-result', (data) => {
 
 socket.on('game-over', ({ rankings, roomState: finalState }) => {
   renderAll(finalState);
-  showGameOver(rankings);
+  // 游戏结束：仅更新界面状态，不弹比分框
 });
 
 socket.on('game-reset', (state) => {
-  document.getElementById('gameoverOverlay').classList.remove('show');
   clearTaskPanel();
   document.getElementById('chatMessages').innerHTML = '';
   appendChatMessage({ system: true, message: '游戏已重置，聊天记录已清除～' });

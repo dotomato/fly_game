@@ -347,10 +347,7 @@ io.on('connection', (socket) => {
       roomState: getRoomPublicState(room)
     });
 
-    // 全部结束时不等确认，直接结束游戏
-    if (room.players.every(p => p.isFinished)) {
-      finishGame(room, roomId);
-    }
+    // 全部玩家已完成时，仍保持 waitingConfirm=true，等最后一个玩家确认后再结束
   });
 
   // 确认任务完成，切换到下一回合
@@ -366,6 +363,13 @@ io.on('connection', (socket) => {
     }
 
     room.waitingConfirm = false;
+
+    // 如果所有玩家均已完成，确认后直接结束游戏
+    if (room.players.every(p => p.isFinished)) {
+      finishGame(room, roomId);
+      return;
+    }
+
     nextTurn(room);
     if (room.status !== 'finished') {
       const nextPlayer = room.players[room.currentTurnIndex];

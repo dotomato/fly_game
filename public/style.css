@@ -1029,7 +1029,8 @@ body {
   background: var(--gray-50);
   border-radius: 8px;
   padding: 5px 10px;
-  max-width: 90%;
+  width: 90%;
+  max-width: none;
   line-height: 1.5;
   white-space: pre-wrap;
 }

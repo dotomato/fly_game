@@ -299,10 +299,10 @@ body {
 .action-bar {
   flex-shrink: 0;
   display: flex;
-  align-items: stretch;
+  align-items: center;
   background: var(--gray-50);
   border-top: 1px solid var(--gray-200);
-  min-height: 0;
+  padding: 8px 0;
 }
 
 /* ========== 任务详情（action-bar 右侧） ========== */
@@ -688,10 +688,8 @@ body {
 .roll-fab {
   position: relative;
   width: 60px;
-  height: auto;
-  min-height: 60px;
+  height: 60px;
   flex-shrink: 0;
-  border-radius: 0;
   border-radius: 50%;
   background: var(--primary);
   color: white;
@@ -1206,7 +1204,7 @@ body {
 
   .roll-fab {
     width: 52px;
-    min-height: 52px;
+    height: 52px;
     font-size: 24px;
   }
 }

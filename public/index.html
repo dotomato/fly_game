@@ -13,7 +13,7 @@
       <!-- 标题 -->
       <div class="lobby-header">
         <h1>💕 情侣飞行棋</h1>
-        <p>与最爱的人一起踏上这段旅程</p>
+        <p id="lobbySubtitle">与最爱的人一起踏上这段旅程</p>
       </div>
 
       <!-- 加入/创建表单 -->
@@ -22,10 +22,7 @@
           <label for="playerName">你的名字</label>
           <input type="text" id="playerName" placeholder="输入你的名字" maxlength="12" autocomplete="off" />
         </div>
-        <div class="form-group" id="roomIdGroup">
-          <label for="roomId">房间 ID</label>
-          <input type="text" id="roomId" placeholder="输入自定义房间ID（与伴侣保持一致）" maxlength="20" autocomplete="off" />
-        </div>
+        <input type="hidden" id="roomId" />
         <div class="form-group" id="scriptIdGroup">
           <label for="scriptId">选择剧本</label>
           <div class="select-wrapper">
@@ -150,29 +147,32 @@
       opt.classList.add('selected');
     });
 
-    // 从 URL 参数自动填写房间号
+    // 从 URL 参数自动填写房间号，否则自动生成
     (function () {
       const p = new URLSearchParams(location.search);
       const room = p.get('room');
       if (room) {
         document.getElementById('roomId').value = room;
-        // 隐藏房间号、剧本选择（加入已有房间时无需设置）
-        document.getElementById('roomIdGroup').style.display = 'none';
+        // 隐藏剧本选择（加入已有房间时无需设置）
         document.getElementById('scriptIdGroup').style.display = 'none';
+        // 标题提示
+        document.getElementById('lobbySubtitle').textContent = '朋友邀请你加入房间，填写名字即可加入 🎉';
         // 清理 URL，避免刷新时重复触发
         history.replaceState(null, '', location.pathname);
-        document.getElementById('playerName').focus();
+      } else {
+        // 自动生成房间ID
+        const generated = Math.random().toString(36).slice(2, 8).toUpperCase();
+        document.getElementById('roomId').value = generated;
+        document.getElementById('lobbySubtitle').textContent = `房间号：${generated}　分享给朋友一起玩吧 🎲`;
       }
+      document.getElementById('playerName').focus();
     })();
 
     // 自动聚焦
     document.getElementById('playerName').focus();
 
-    // 回车跳转
+    // 回车提交
     document.getElementById('playerName').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('roomId').focus();
-    });
-    document.getElementById('roomId').addEventListener('keydown', e => {
       if (e.key === 'Enter') joinRoom();
     });
 
@@ -188,7 +188,6 @@
       const roomId = document.getElementById('roomId').value.trim();
 
       if (!playerName) { showError('joinError', '请输入你的名字'); return; }
-      if (!roomId) { showError('joinError', '请输入房间ID'); return; }
 
       document.getElementById('joinBtn').disabled = true;
       document.getElementById('joinBtn').textContent = '连接中...';

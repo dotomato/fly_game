@@ -249,6 +249,15 @@
       }
     }
 
+    // 切回前台自动重连（Socket.io 重连时重新发 join-room）
+    socket.on('connect', () => {
+      if (myRoomId && joinSent) {
+        const playerName = getCookie('playerName');
+        const selectedEmoji = document.querySelector('.emoji-option.selected')?.dataset.emoji || '🐱';
+        socket.emit('join-room', { roomId: myRoomId, playerName, maxPlayers: 0, joinOnly: true, emoji: selectedEmoji });
+      }
+    });
+
     // 服务器响应：成功加入
     socket.on('joined', ({ roomId, playerIndex }) => {
       myRoomId = roomId;

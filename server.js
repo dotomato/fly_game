@@ -228,8 +228,8 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // 游戏进行中：按名字匹配，允许玩家用新 socketId 重连
-    if (room.status === 'playing' || room.status === 'finished') {
+    // 等待中或游戏中：按名字匹配，允许玩家用新 socketId 重连
+    if (room.status === 'waiting' || room.status === 'playing' || room.status === 'finished') {
       const existingByName = room.players.find(p => p.name === playerName);
       if (existingByName) {
         // 取消该玩家挂起的断线处理（宽限期内重连）
@@ -239,17 +239,30 @@ io.on('connection', (socket) => {
           disconnectTimers.delete(oldSocketId);
           room.log.push(`${existingByName.emoji} ${existingByName.name} 重新连接了`);
           console.log(`[重连] ${existingByName.emoji}${existingByName.name}  房间=${roomId}  旧socketId=${oldSocketId}  新socketId=${socket.id}`);
-        } else {
-          console.log(`[重新加入] ${existingByName.emoji}${existingByName.name}  房间=${roomId}  socketId=${socket.id}`);
+          existingByName.socketId = socket.id;
+          socket.join(roomId);
+          socket.emit('joined', { roomId, playerIndex: room.players.indexOf(existingByName) });
+          io.to(roomId).emit('room-update', getRoomPublicState(room));
+          return;
         }
-        existingByName.socketId = socket.id;
-        socket.join(roomId);
-        socket.emit('joined', { roomId, playerIndex: room.players.indexOf(existingByName) });
-        io.to(roomId).emit('room-update', getRoomPublicState(room));
+        // 没有挂起的断线计时器：同名玩家已在房间中且连接正常，等待中允许顶替（刷新场景），游戏中拒绝
+        if (room.status === 'waiting') {
+          existingByName.socketId = socket.id;
+          socket.join(roomId);
+          socket.emit('joined', { roomId, playerIndex: room.players.indexOf(existingByName) });
+          io.to(roomId).emit('room-update', getRoomPublicState(room));
+          console.log(`[重新加入等待室] ${existingByName.emoji}${existingByName.name}  房间=${roomId}  socketId=${socket.id}`);
+          return;
+        }
+        // playing/finished 且无断线计时器 → 拒绝
+        socket.emit('error', { message: '游戏已在进行中，无法加入' });
         return;
       }
-      socket.emit('error', { message: '游戏已在进行中，无法加入' });
-      return;
+      // waiting 状态下名字不匹配 → 走下面正常加入流程
+      if (room.status === 'playing' || room.status === 'finished') {
+        socket.emit('error', { message: '游戏已在进行中，无法加入' });
+        return;
+      }
     }
 
     // 房间已满
@@ -495,50 +508,52 @@ io.on('connection', (socket) => {
       const player = room.players[playerIndex];
       console.log(`[断线] ${socket.id}  玩家=${player.emoji}${player.name}  房间=${roomId}  状态=${room.status}`);
 
-      if (room.status === 'waiting') {
-        // 等待中直接移除，无需宽限期
-        room.log.push(`${player.emoji} ${player.name} 离开了`);
-        room.players.splice(playerIndex, 1);
-        room.players.forEach((p, i) => { p.emoji = EMOJIS[i]; });
-        if (room.hostId === socket.id && room.players.length > 0) {
-          room.hostId = room.players[0].socketId;
-        }
-        if (room.players.length === 0) {
-          rooms.delete(roomId);
-        } else {
-          io.to(roomId).emit('room-update', getRoomPublicState(room));
-        }
-      } else if (room.status === 'playing') {
-        // 游戏中：延迟处理，给重连留宽限期
+      if (room.status === 'waiting' || room.status === 'playing') {
+        // 等待中和游戏中都给宽限期，防止手机切后台误断线
         room.log.push(`${player.emoji} ${player.name} 断线了，等待重连...`);
         io.to(roomId).emit('room-update', getRoomPublicState(room));
 
-        const timer = setTimeout(() => {
+        const timerWait = setTimeout(() => {
           disconnectTimers.delete(socket.id);
-          // 宽限期结束，检查玩家是否已用新 socket 重连（socketId 已变）
-          if (player.socketId !== socket.id) return;
+          if (player.socketId !== socket.id) return; // 已重连
 
           console.log(`[超时断线] ${player.emoji}${player.name}  房间=${roomId}  socketId=${socket.id}`);
-          const idx = room.players.findIndex(p => p.socketId === socket.id);
-          if (idx === -1 || room.status !== 'playing') return;
 
-          player.finishOrder = room.players.filter(p => p.isFinished).length + 1;
-          player.isFinished = true;
-          room.log[room.log.length - 1] = `${player.emoji} ${player.name} 断线，已退出游戏`;
-
-          if (room.players.every(p => p.isFinished)) {
-            finishGame(room, roomId);
-          } else {
-            if (room.currentTurnIndex === idx) nextTurn(room);
-            if (room.status === 'finished') {
-              finishGame(room, roomId);
+          if (room.status === 'waiting') {
+            // 宽限期结束，从等待室移除
+            const idx = room.players.findIndex(p => p.socketId === socket.id);
+            if (idx === -1) return;
+            room.log[room.log.length - 1] = `${player.emoji} ${player.name} 离开了`;
+            room.players.splice(idx, 1);
+            room.players.forEach((p, i) => { p.emoji = EMOJIS[i]; });
+            if (room.hostId === socket.id && room.players.length > 0) {
+              room.hostId = room.players[0].socketId;
+            }
+            if (room.players.length === 0) {
+              rooms.delete(roomId);
             } else {
               io.to(roomId).emit('room-update', getRoomPublicState(room));
+            }
+          } else if (room.status === 'playing') {
+            const idx = room.players.findIndex(p => p.socketId === socket.id);
+            if (idx === -1) return;
+            player.finishOrder = room.players.filter(p => p.isFinished).length + 1;
+            player.isFinished = true;
+            room.log[room.log.length - 1] = `${player.emoji} ${player.name} 断线，已退出游戏`;
+            if (room.players.every(p => p.isFinished)) {
+              finishGame(room, roomId);
+            } else {
+              if (room.currentTurnIndex === idx) nextTurn(room);
+              if (room.status === 'finished') {
+                finishGame(room, roomId);
+              } else {
+                io.to(roomId).emit('room-update', getRoomPublicState(room));
+              }
             }
           }
         }, REJOIN_GRACE_MS);
 
-        disconnectTimers.set(socket.id, timer);
+        disconnectTimers.set(socket.id, timerWait);
       }
       break;
     }

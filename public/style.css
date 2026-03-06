@@ -388,14 +388,18 @@ body {
 }
 
 .turn-indicator.my-turn {
-  background: var(--primary);
+  background: linear-gradient(135deg, #3B82F6, #6366F1);
   color: white;
-  animation: pulse 1.5s infinite;
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+  animation: myTurnPulse 1.2s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+@keyframes myTurnPulse {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0   rgba(99,102,241,0.6); }
+  50%  { transform: scale(1.13); box-shadow: 0 0 0 10px rgba(99,102,241,0);  }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0   rgba(99,102,241,0);   }
 }
 
 .game-body {

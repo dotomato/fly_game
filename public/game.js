@@ -468,12 +468,12 @@ function appendVoiceMessage({ playerEmoji, playerName, audio, duration, timestam
   };
 }
 
-function appendChatMessage({ system = false, playerEmoji, playerName, message, timestamp, isMine = false }) {
+function appendChatMessage({ system = false, playerEmoji, playerName, message, timestamp, isMine = false, cssClass = '' }) {
   const container = document.getElementById('chatMessages');
   const div = document.createElement('div');
 
   if (system) {
-    div.className = 'chat-msg system';
+    div.className = 'chat-msg system' + (cssClass ? ' ' + cssClass : '');
     const bubble = document.createElement('span');
     bubble.className = 'chat-msg-bubble';
     bubble.textContent = message;
@@ -638,6 +638,13 @@ socket.on('dice-result', (data) => {
     renderAll(roomState || newState);
     if (task) {
       showTaskPanel({ playerEmoji, playerName, diceValue, newPosition, task, justFinished });
+      // 任务系统消息
+      const finishTag = justFinished ? ' 🏁' : '';
+      appendChatMessage({
+        system: true,
+        cssClass: 'task-msg',
+        message: `${playerEmoji} ${playerName} 落在第 ${newPosition} 格${finishTag}\n📋 ${task.content}`
+      });
     }
   });
 });

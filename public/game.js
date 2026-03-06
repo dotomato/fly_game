@@ -16,6 +16,7 @@ const socket = io();
 let roomState = null;
 let mySocketId = null;
 let isRolling = false;
+let isWaitingConfirm = false;
 let tasksData = [];
 
 // ===== 语音录制状态 =====
@@ -157,19 +158,37 @@ function updateTurnIndicator(players, currentTurnIndex, status) {
   }
 }
 
-// ===== 更新掷骰子按钮（悬浮 FAB） =====
-function updateRollBtn(players, currentTurnIndex, status) {
+// ===== 更新操作按钮（骰子 / 已完成）=====
+function updateActionBtn(players, currentTurnIndex, status, waitingConfirm) {
   const fab = document.getElementById('rollFab');
-  if (status !== 'playing' || isRolling) {
+
+  if (status !== 'playing') {
     fab.disabled = true;
+    fab.classList.remove('confirm');
+    fab.onclick = rollDice;
     return;
   }
-  if (!players || !players[currentTurnIndex]) {
-    fab.disabled = true;
-    return;
+
+  const currentPlayer = players && players[currentTurnIndex];
+  const isMyTurn = currentPlayer && currentPlayer.socketId === mySocketId;
+
+  if (waitingConfirm) {
+    if (isMyTurn) {
+      fab.disabled = isWaitingConfirm;
+      fab.classList.add('confirm');
+      fab.textContent = '✅';
+      fab.onclick = confirmDone;
+    } else {
+      fab.disabled = true;
+      fab.classList.remove('confirm');
+      fab.onclick = rollDice;
+    }
+  } else {
+    fab.classList.remove('confirm');
+    fab.textContent = '🎲';
+    fab.onclick = rollDice;
+    fab.disabled = !isMyTurn || (currentPlayer && currentPlayer.isFinished) || isRolling;
   }
-  const currentPlayer = players[currentTurnIndex];
-  fab.disabled = currentPlayer.socketId !== mySocketId || currentPlayer.isFinished;
 }
 
 // ===== 渲染游戏日志 =====
@@ -194,7 +213,7 @@ function renderAll(state) {
   highlightCells(state.players, state.currentTurnIndex);
   renderSidePlayerList(state.players, state.currentTurnIndex);
   updateTurnIndicator(state.players, state.currentTurnIndex, state.status);
-  updateRollBtn(state.players, state.currentTurnIndex, state.status);
+  updateActionBtn(state.players, state.currentTurnIndex, state.status, state.waitingConfirm);
   renderGameLog(state.log || []);
   updateHostSection(state);
 }
@@ -247,6 +266,15 @@ function animatePlayerMove(playerEmoji, fromPos, toPos, callback) {
       }, 680);
     });
   });
+}
+
+// ===== 确认任务完成 =====
+function confirmDone() {
+  if (isWaitingConfirm) return;
+  isWaitingConfirm = true;
+  const fab = document.getElementById('rollFab');
+  fab.disabled = true;
+  socket.emit('confirm-done', { roomId: ROOM_ID });
 }
 
 // ===== 掷骰子 =====
@@ -570,6 +598,7 @@ socket.on('joined', () => {
 });
 
 socket.on('room-update', (state) => {
+  isWaitingConfirm = false;
   renderAll(state);
 });
 
@@ -645,7 +674,7 @@ socket.on('error', ({ message }) => {
   const fab = document.getElementById('rollFab');
   fab.classList.remove('rolling');
   fab.textContent = '🎲';
-  if (roomState) updateRollBtn(roomState.players, roomState.currentTurnIndex, roomState.status);
+  if (roomState) updateActionBtn(roomState.players, roomState.currentTurnIndex, roomState.status, roomState.waitingConfirm);
   alert('错误：' + message);
 });
 

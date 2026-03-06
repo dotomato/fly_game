@@ -726,6 +726,16 @@ body {
   animation: diceRoll 0.5s ease-in-out;
 }
 
+.roll-fab.confirm {
+  background: var(--success);
+  font-size: 22px;
+}
+
+.roll-fab.confirm:hover:not(:disabled) {
+  background: #059669;
+  box-shadow: var(--shadow-xl);
+}
+
 /* ========== 任务弹窗 ========== */
 .modal-overlay {
   position: fixed;

@@ -88,6 +88,7 @@ const EMOJIS = ['❤️', '💙', '💚', '💛'];
  *   currentTurnIndex: number,
  *   status: 'waiting' | 'playing' | 'finished',
  *   finishCount: number,
+ *   waitingConfirm: boolean,
  *   log: string[],
  *   chatMessages: [{ playerEmoji, playerName, message, timestamp }]
  * }
@@ -109,6 +110,7 @@ function getRoomPublicState(room) {
     })),
     currentTurnIndex: room.currentTurnIndex,
     status: room.status,
+    waitingConfirm: room.waitingConfirm || false,
     log: room.log.slice(-20) // 只发最近20条日志
   };
 }
@@ -261,6 +263,7 @@ io.on('connection', (socket) => {
     });
     room.currentTurnIndex = 0;
     room.finishCount = 0;
+    room.waitingConfirm = false;
     room.status = 'playing';
     room.log = ['游戏重置，再来一局！'];
     room.chatMessages = [];
@@ -331,6 +334,9 @@ io.on('connection', (socket) => {
       room.log.push(`${currentPlayer.emoji} ${currentPlayer.name} 掷出 ${diceValue}，${oldPosition === 0 ? '出发' : `从第 ${oldPosition} 格`}前进到第 ${newPosition} 格`);
     }
 
+    // 等待当前玩家确认任务完成，暂不切换回合
+    room.waitingConfirm = true;
+
     // 发送骰子结果给所有人
     const diceResult = {
       playerId: socket.id,
@@ -346,37 +352,57 @@ io.on('connection', (socket) => {
 
     // 检查是否全部结束
     const allFinished = room.players.every(p => p.isFinished);
-    if (allFinished) {
-      room.status = 'finished';
-      room.log.push('🎊 所有玩家完成旅程！游戏结束！');
-    } else if (!justFinished) {
-      // 轮换到下一个玩家
-      nextTurn(room);
-      const nextPlayer = room.players[room.currentTurnIndex];
-      room.log.push(`轮到 ${nextPlayer.emoji} ${nextPlayer.name} 掷骰子`);
-    } else {
-      // 当前玩家结束，如果还有未结束的玩家，轮换
-      if (!allFinished) {
-        nextTurn(room);
-        if (room.status !== 'finished') {
-          const nextPlayer = room.players[room.currentTurnIndex];
-          room.log.push(`轮到 ${nextPlayer.emoji} ${nextPlayer.name} 掷骰子`);
-        }
-      }
-    }
 
     io.to(roomId).emit('dice-result', {
       ...diceResult,
       roomState: getRoomPublicState(room)
     });
 
-    if (room.status === 'finished') {
+    if (allFinished) {
+      // 全部结束时不等确认，直接结束游戏
+      room.status = 'finished';
+      room.waitingConfirm = false;
+      room.log.push('🎊 所有玩家完成旅程！游戏结束！');
       const rankings = room.players
         .filter(p => p.isFinished)
         .sort((a, b) => a.finishOrder - b.finishOrder)
         .map(p => ({ name: p.name, emoji: p.emoji, order: p.finishOrder }));
       io.to(roomId).emit('game-over', { rankings, roomState: getRoomPublicState(room) });
       console.log(`[游戏结束] 房间 ${roomId}`);
+    }
+  });
+
+  // 确认任务完成，切换到下一回合
+  socket.on('confirm-done', ({ roomId }) => {
+    const room = rooms.get(roomId);
+    if (!room || room.status !== 'playing') return;
+    if (!room.waitingConfirm) return;
+
+    const currentPlayer = room.players[room.currentTurnIndex];
+    if (currentPlayer.socketId !== socket.id) {
+      socket.emit('error', { message: '不是你的回合' });
+      return;
+    }
+
+    room.waitingConfirm = false;
+
+    const allFinished = room.players.every(p => p.isFinished);
+    if (allFinished) {
+      room.status = 'finished';
+      room.log.push('🎊 所有玩家完成旅程！游戏结束！');
+      const rankings = room.players
+        .filter(p => p.isFinished)
+        .sort((a, b) => a.finishOrder - b.finishOrder)
+        .map(p => ({ name: p.name, emoji: p.emoji, order: p.finishOrder }));
+      io.to(roomId).emit('game-over', { rankings, roomState: getRoomPublicState(room) });
+      console.log(`[游戏结束] 房间 ${roomId}`);
+    } else {
+      nextTurn(room);
+      if (room.status !== 'finished') {
+        const nextPlayer = room.players[room.currentTurnIndex];
+        room.log.push(`轮到 ${nextPlayer.emoji} ${nextPlayer.name} 掷骰子`);
+      }
+      io.to(roomId).emit('room-update', getRoomPublicState(room));
     }
   });
 

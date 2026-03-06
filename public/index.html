@@ -254,6 +254,17 @@
       }
     }
 
+    // 断线自动重连
+    socket.on('connect', () => {
+      const lastRoomId = getCookie('lastRoomId');
+      const savedName = getCookie('playerName');
+      if (lastRoomId && savedName && !myRoomId) {
+        // 已有上次的房间ID和名字，且当前不在等待室 → 自动重发 join-room
+        const selectedEmoji = document.querySelector('.emoji-option.selected')?.dataset.emoji || '🐱';
+        socket.emit('join-room', { roomId: lastRoomId, playerName: savedName, maxPlayers: 4, joinOnly: true, emoji: selectedEmoji });
+      }
+    });
+
     // 服务器响应：成功加入
     socket.on('joined', ({ roomId, playerIndex }) => {
       myRoomId = roomId;

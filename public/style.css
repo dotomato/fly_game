@@ -295,12 +295,23 @@ body {
   z-index: 10;
 }
 
-/* ========== 任务详情栏（标题下方，全宽） ========== */
-.task-bar {
+/* ========== 操作栏：骰子（左）+ 任务详情（右） ========== */
+.action-bar {
   flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  background: var(--gray-50);
+  border-top: 1px solid var(--gray-200);
+  min-height: 0;
+}
+
+/* ========== 任务详情（action-bar 右侧） ========== */
+.task-bar {
+  flex: 1;
+  min-width: 0;
   background: var(--primary-light);
-  border-bottom: 3px solid var(--primary);
-  padding: 10px 20px;
+  border-left: 3px solid var(--primary);
+  padding: 10px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -310,7 +321,7 @@ body {
 
 .task-bar.task-bar-end {
   background: var(--danger-light);
-  border-bottom-color: var(--danger);
+  border-left-color: var(--danger);
 }
 
 .task-bar-meta {
@@ -673,22 +684,14 @@ body {
   font-weight: 500;
 }
 
-/* ========== 掷骰子按钮托盘 ========== */
-.dice-bar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 0;
-  background: var(--gray-50);
-  border-top: 1px solid var(--gray-200);
-}
-
-/* ========== 掉骰子按钮（不再固定定位） ========== */
+/* ========== 掷骰子按钮（action-bar 左侧） ========== */
 .roll-fab {
   position: relative;
   width: 60px;
-  height: 60px;
+  height: auto;
+  min-height: 60px;
+  flex-shrink: 0;
+  border-radius: 0;
   border-radius: 50%;
   background: var(--primary);
   color: white;
@@ -1168,7 +1171,8 @@ body {
   }
 
   .task-bar {
-    padding: 8px 14px;
+    padding: 8px 12px;
+    border-left-width: 3px;
   }
 
   .task-bar-content {
@@ -1202,7 +1206,7 @@ body {
 
   .roll-fab {
     width: 52px;
-    height: 52px;
+    min-height: 52px;
     font-size: 24px;
   }
 }

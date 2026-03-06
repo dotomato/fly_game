@@ -16,15 +16,6 @@
       <button class="btn-home" onclick="confirmHome()">← 首页</button>
     </header>
 
-    <!-- 任务详情（标题栏下方，全宽） -->
-    <div class="task-bar" id="taskBar">
-      <div class="task-bar-meta">
-        <span class="task-bar-cell" id="taskBarCell"></span>
-        <span class="task-bar-player" id="taskBarPlayer"></span>
-      </div>
-      <div class="task-bar-content" id="taskBarContent">落子后，任务将显示在这里 ✨</div>
-    </div>
-
     <!-- 返回首页确认弹窗 -->
     <div class="modal-overlay" id="homeModal">
       <div class="modal-card" style="max-width:360px">
@@ -54,9 +45,16 @@
           </div>
         </div>
 
-        <!-- 掷骰子按钮托盘（聊天框上方居中） -->
-        <div class="dice-bar">
+        <!-- 操作栏：骰子（左）+ 任务详情（右），聊天框上方 -->
+        <div class="action-bar">
           <button class="roll-fab" id="rollFab" disabled onclick="rollDice()">🎲</button>
+          <div class="task-bar" id="taskBar">
+            <div class="task-bar-meta">
+              <span class="task-bar-cell" id="taskBarCell"></span>
+              <span class="task-bar-player" id="taskBarPlayer"></span>
+            </div>
+            <div class="task-bar-content" id="taskBarContent">落子后，任务将显示在这里 ✨</div>
+          </div>
         </div>
 
         <!-- 聊天框（常驻） -->

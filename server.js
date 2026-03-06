@@ -74,6 +74,7 @@ const disconnectTimers = new Map();
 const REJOIN_GRACE_MS = 8000; // 8秒宽限期
 
 const EMOJIS = ['❤️', '💙', '💚', '💛'];
+const ALLOWED_EMOJIS = ['❤️','💙','💚','💛','🧡','💜','🖤','🤍','💗','💖','🌸','🌺','🍀','⭐','🌙','🔥','🐱','🐶','🐰','🦊'];
 
 /**
  * 房间结构:
@@ -151,7 +152,7 @@ io.on('connection', (socket) => {
   console.log(`[连接] ${socket.id}`);
 
   // 加入房间
-  socket.on('join-room', ({ roomId, playerName, maxPlayers, scriptId }) => {
+  socket.on('join-room', ({ roomId, playerName, maxPlayers, scriptId, emoji }) => {
     roomId = String(roomId).trim();
     playerName = String(playerName).trim().slice(0, 12) || '匿名玩家';
     maxPlayers = Math.min(Math.max(parseInt(maxPlayers) || 4, 2), 4); // 仅在创建新房间时生效
@@ -215,7 +216,13 @@ io.on('connection', (socket) => {
     const player = {
       socketId: socket.id,
       name: playerName,
-      emoji: EMOJIS[room.players.length],
+      emoji: (() => {
+        // 用玩家选择的 emoji，需在允许列表内且未被占用
+        const taken = new Set(room.players.map(p => p.emoji));
+        if (emoji && ALLOWED_EMOJIS.includes(emoji) && !taken.has(emoji)) return emoji;
+        // 否则分配一个未占用的默认 emoji
+        return ALLOWED_EMOJIS.find(e => !taken.has(e)) || EMOJIS[room.players.length % EMOJIS.length];
+      })(),
       position: 0,
       isFinished: false,
       finishOrder: null

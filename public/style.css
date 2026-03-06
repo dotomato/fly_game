@@ -1254,21 +1254,37 @@ body {
 }
 
 /* ========== 大厅（index.html）专用 ========== */
-.emoji-preview {
+.emoji-picker {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
-.emoji-badge {
+.emoji-option {
   font-size: 22px;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   background: var(--gray-100);
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.emoji-option:hover {
+  background: var(--gray-200);
+  transform: scale(1.1);
+}
+
+.emoji-option.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  transform: scale(1.1);
 }
 
 .max-note {
